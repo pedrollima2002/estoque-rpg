@@ -78,10 +78,12 @@ create table if not exists public.produtos (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
   descricao text default '',
+  subcategoria text default '',
   categoria text not null,
   cor text not null,
   tamanho text default '',
   quantidade integer not null default 0 check (quantidade >= 0),
+  valor_venda numeric(10, 2) check (valor_venda is null or valor_venda >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -229,6 +231,16 @@ begin
   end if;
 end $$;
 ```
+
+### Atualizar banco existente
+
+Se o banco já foi criado antes da inclusão de subcategoria e valor de venda, execute uma vez no **SQL Editor** o arquivo:
+
+```text
+sql/adicionar-subcategoria-valor.sql
+```
+
+Essa atualização não apaga produtos, histórico ou usuários.
 
 ### 3. Ativar autenticação
 

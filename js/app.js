@@ -67,10 +67,12 @@ const elementos = {
   produtoId: document.querySelector('#produto-id'),
   produtoNome: document.querySelector('#produto-nome'),
   produtoDescricao: document.querySelector('#produto-descricao'),
+  produtoSubcategoria: document.querySelector('#produto-subcategoria'),
   produtoCategoria: document.querySelector('#produto-categoria'),
   produtoCor: document.querySelector('#produto-cor'),
   produtoTamanho: document.querySelector('#produto-tamanho'),
   produtoQuantidade: document.querySelector('#produto-quantidade'),
+  produtoValorVenda: document.querySelector('#produto-valor-venda'),
   salvarProdutoBtn: document.querySelector('#salvar-produto-btn'),
   cancelarProdutoBtn: document.querySelector('#cancelar-produto-btn'),
   fecharModalBtn: document.querySelector('#fechar-modal-btn')
@@ -292,7 +294,7 @@ function montarCartaoProduto(produto) {
   const status = obterStatusEstoque(produto.quantidade);
   const desabilitado = estado.salvandoProdutos.has(produto.id) ? ' disabled' : '';
   const quantidade = Number(produto.quantidade);
-  const descricao = produto.descricao || 'Sem descrição';
+  const descricao = produto.descricao || '';
   let html = '';
 
   html += '<article class="product-card ' + status.classe + '" data-id="' + escaparHtml(produto.id) + '">';
@@ -301,7 +303,8 @@ function montarCartaoProduto(produto) {
   html += '<div class="card-top">';
   html += '<div>';
   html += '<h3>' + escaparHtml(produto.nome) + '</h3>';
-  html += '<p class="description">' + escaparHtml(descricao) + '</p>';
+  html += descricao ? '<p class="description">' + escaparHtml(descricao) + '</p>' : '';
+  html += produto.valor_venda !== null && produto.valor_venda !== undefined ? '<p class="price-line">Venda: <strong>' + formatarMoeda(produto.valor_venda) + '</strong></p>' : '';
   html += '</div>';
   html += '<details class="card-menu">';
   html += '<summary aria-label="Opções do produto">⋯</summary>';
@@ -313,6 +316,7 @@ function montarCartaoProduto(produto) {
   html += '</div>';
   html += '<div class="tags">';
   html += montarTag(produto.categoria);
+  html += produto.subcategoria ? montarTag(produto.subcategoria) : '';
   html += montarTag(produto.cor);
   html += produto.tamanho ? montarTag(produto.tamanho) : '';
   html += '</div>';
@@ -407,6 +411,7 @@ function abrirFormularioNovoProduto() {
   elementos.produtoForm.reset();
   elementos.produtoId.value = '';
   elementos.produtoQuantidade.value = '0';
+  elementos.produtoValorVenda.value = '';
   abrirDialogProduto();
 }
 
@@ -416,10 +421,12 @@ function abrirFormularioEditarProduto(produto) {
   elementos.produtoId.value = produto.id;
   elementos.produtoNome.value = produto.nome;
   elementos.produtoDescricao.value = produto.descricao ?? '';
+  elementos.produtoSubcategoria.value = produto.subcategoria ?? '';
   elementos.produtoCategoria.value = produto.categoria ?? '';
   elementos.produtoCor.value = produto.cor ?? '';
   elementos.produtoTamanho.value = produto.tamanho ?? '';
   elementos.produtoQuantidade.value = produto.quantidade;
+  elementos.produtoValorVenda.value = produto.valor_venda ?? '';
   abrirDialogProduto();
 }
 
@@ -472,6 +479,8 @@ async function aoSalvarProduto(evento) {
 
 function lerProdutoDoFormulario() {
   const quantidade = Number(elementos.produtoQuantidade.value);
+  const valorVendaTexto = elementos.produtoValorVenda.value.trim();
+  const valorVenda = valorVendaTexto === '' ? '' : Number(valorVendaTexto);
 
   if (!elementos.produtoForm.reportValidity()) {
     return null;
@@ -482,13 +491,20 @@ function lerProdutoDoFormulario() {
     return null;
   }
 
+  if (valorVenda !== '' && (Number.isNaN(valorVenda) || valorVenda < 0)) {
+    mostrarMensagem('O valor de venda deve ser maior ou igual a zero.', 'error');
+    return null;
+  }
+
   return {
     nome: elementos.produtoNome.value,
     descricao: elementos.produtoDescricao.value,
+    subcategoria: elementos.produtoSubcategoria.value,
     categoria: elementos.produtoCategoria.value,
     cor: elementos.produtoCor.value,
     tamanho: elementos.produtoTamanho.value,
-    quantidade
+    quantidade,
+    valorVenda
   };
 }
 
@@ -629,4 +645,11 @@ function formatarData(dataIso) {
     dateStyle: 'short',
     timeStyle: 'short'
   }).format(new Date(dataIso));
+}
+
+function formatarMoeda(valor) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(Number(valor));
 }

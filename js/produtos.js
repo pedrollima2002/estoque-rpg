@@ -1,7 +1,7 @@
 import { supabase } from './supabase-config.js';
 import { registrarMovimentacao } from './historico.js';
 
-const CAMPOS_PRODUTO = [
+const CAMPOS_PRODUTO_BASE = [
   'id',
   'nome',
   'descricao',
@@ -13,9 +13,30 @@ const CAMPOS_PRODUTO = [
   'updated_at'
 ].join(',');
 
+const CAMPOS_PRODUTO_COMPLETO = [
+  'id',
+  'nome',
+  'descricao',
+  'subcategoria',
+  'categoria',
+  'cor',
+  'tamanho',
+  'quantidade',
+  'valor_venda',
+  'created_at',
+  'updated_at'
+].join(',');
+
+let camposProdutoAtivos = CAMPOS_PRODUTO_COMPLETO;
+let produtoTemCamposExtras = true;
+
 // Garante que os dados enviados ao Supabase estejam limpos e no formato correto.
 function prepararProduto(produto) {
-  return {
+  const valorVenda = produto.valorVenda === '' || produto.valorVenda === null || produto.valorVenda === undefined
+    ? null
+    : Number(produto.valorVenda);
+
+  const produtoLimpo = {
     nome: produto.nome.trim(),
     descricao: produto.descricao.trim(),
     categoria: produto.categoria.trim(),
@@ -23,19 +44,54 @@ function prepararProduto(produto) {
     tamanho: produto.tamanho.trim(),
     quantidade: Number(produto.quantidade)
   };
+
+  if (produtoTemCamposExtras) {
+    produtoLimpo.subcategoria = produto.subcategoria.trim();
+    produtoLimpo.valor_venda = valorVenda;
+  }
+
+  return produtoLimpo;
+}
+
+function normalizarProdutos(produtos) {
+  return (produtos ?? []).map((produto) => ({
+    ...produto,
+    subcategoria: produto.subcategoria ?? '',
+    valor_venda: produto.valor_venda ?? null
+  }));
+}
+
+function erroDeCampoExtraAusente(error) {
+  const mensagem = error?.message ?? '';
+  return mensagem.includes('subcategoria') || mensagem.includes('valor_venda');
+}
+
+async function selecionarProdutos(campos) {
+  return supabase
+    .from('produtos')
+    .select(campos)
+    .order('nome', { ascending: true });
 }
 
 export async function listarProdutos() {
-  const { data, error } = await supabase
-    .from('produtos')
-    .select(CAMPOS_PRODUTO)
-    .order('nome', { ascending: true });
+  let { data, error } = await selecionarProdutos(CAMPOS_PRODUTO_COMPLETO);
+
+  if (error && erroDeCampoExtraAusente(error)) {
+    produtoTemCamposExtras = false;
+    camposProdutoAtivos = CAMPOS_PRODUTO_BASE;
+    const respostaBase = await selecionarProdutos(CAMPOS_PRODUTO_BASE);
+    data = respostaBase.data;
+    error = respostaBase.error;
+  } else {
+    produtoTemCamposExtras = true;
+    camposProdutoAtivos = CAMPOS_PRODUTO_COMPLETO;
+  }
 
   if (error) {
     throw error;
   }
 
-  return data ?? [];
+  return normalizarProdutos(data);
 }
 
 export async function criarProduto(produto, usuario) {
@@ -44,23 +100,25 @@ export async function criarProduto(produto, usuario) {
   const { data, error } = await supabase
     .from('produtos')
     .insert(novoProduto)
-    .select(CAMPOS_PRODUTO)
+    .select(camposProdutoAtivos)
     .single();
 
   if (error) {
     throw error;
   }
 
+  const produtoCriado = normalizarProdutos([data])[0];
+
   await registrarMovimentacao({
-    produtoId: data.id,
-    produtoNome: data.nome,
+    produtoId: produtoCriado.id,
+    produtoNome: produtoCriado.nome,
     quantidadeAnterior: 0,
-    quantidadeNova: data.quantidade,
+    quantidadeNova: produtoCriado.quantidade,
     tipo: 'entrada',
     usuario
   });
 
-  return data;
+  return produtoCriado;
 }
 
 export async function editarProduto(produtoId, produto, produtoAnterior, usuario) {
@@ -70,23 +128,25 @@ export async function editarProduto(produtoId, produto, produtoAnterior, usuario
     .from('produtos')
     .update(produtoAtualizado)
     .eq('id', produtoId)
-    .select(CAMPOS_PRODUTO)
+    .select(camposProdutoAtivos)
     .single();
 
   if (error) {
     throw error;
   }
 
+  const produtoEditado = normalizarProdutos([data])[0];
+
   await registrarMovimentacao({
-    produtoId: data.id,
-    produtoNome: data.nome,
+    produtoId: produtoEditado.id,
+    produtoNome: produtoEditado.nome,
     quantidadeAnterior: Number(produtoAnterior.quantidade),
-    quantidadeNova: data.quantidade,
+    quantidadeNova: produtoEditado.quantidade,
     tipo: 'edição',
     usuario
   });
 
-  return data;
+  return produtoEditado;
 }
 
 export async function excluirProduto(produto, usuario) {
@@ -122,23 +182,25 @@ export async function ajustarQuantidade(produto, delta, usuario) {
     .from('produtos')
     .update({ quantidade: quantidadeNova })
     .eq('id', produto.id)
-    .select(CAMPOS_PRODUTO)
+    .select(camposProdutoAtivos)
     .single();
 
   if (error) {
     throw error;
   }
 
+  const produtoAtualizado = normalizarProdutos([data])[0];
+
   await registrarMovimentacao({
-    produtoId: data.id,
-    produtoNome: data.nome,
+    produtoId: produtoAtualizado.id,
+    produtoNome: produtoAtualizado.nome,
     quantidadeAnterior,
     quantidadeNova,
     tipo: delta > 0 ? 'entrada' : 'saída',
     usuario
   });
 
-  return data;
+  return produtoAtualizado;
 }
 
 export function observarProdutos(callback) {
