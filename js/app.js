@@ -71,6 +71,10 @@ const elementos = {
   produtoCategoria: document.querySelector('#produto-categoria'),
   produtoCor: document.querySelector('#produto-cor'),
   produtoTamanho: document.querySelector('#produto-tamanho'),
+  sugestoesSubcategoria: document.querySelector('#sugestoes-subcategoria'),
+  sugestoesCategoria: document.querySelector('#sugestoes-categoria'),
+  sugestoesCor: document.querySelector('#sugestoes-cor'),
+  sugestoesTamanho: document.querySelector('#sugestoes-tamanho'),
   produtoQuantidade: document.querySelector('#produto-quantidade'),
   produtoValorVenda: document.querySelector('#produto-valor-venda'),
   salvarProdutoBtn: document.querySelector('#salvar-produto-btn'),
@@ -206,6 +210,7 @@ async function carregarProdutos() {
     estado.produtos = await listarProdutos();
     estado.produtos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     atualizarFiltros();
+    atualizarSugestoesFormulario();
     renderizarResumo();
     renderizarProdutos();
   } catch (erro) {
@@ -254,6 +259,19 @@ function preencherFiltro(select, opcoes, valorAtual) {
 
   select.innerHTML = html;
   select.value = valorSelecionado;
+}
+
+function atualizarSugestoesFormulario() {
+  preencherSugestoes(elementos.sugestoesCategoria, valoresUnicos('categoria'));
+  preencherSugestoes(elementos.sugestoesSubcategoria, valoresUnicos('subcategoria'));
+  preencherSugestoes(elementos.sugestoesCor, valoresUnicos('cor'));
+  preencherSugestoes(elementos.sugestoesTamanho, valoresUnicos('tamanho'));
+}
+
+function preencherSugestoes(datalist, opcoes) {
+  datalist.innerHTML = opcoes
+    .map((opcao) => '<option value="' + escaparHtml(opcao) + '"></option>')
+    .join('');
 }
 
 function renderizarProdutos() {
@@ -499,13 +517,29 @@ function lerProdutoDoFormulario() {
   return {
     nome: elementos.produtoNome.value,
     descricao: elementos.produtoDescricao.value,
-    subcategoria: elementos.produtoSubcategoria.value,
-    categoria: elementos.produtoCategoria.value,
-    cor: elementos.produtoCor.value,
-    tamanho: elementos.produtoTamanho.value,
+    subcategoria: obterValorFormulario('subcategoria', elementos.produtoSubcategoria.value),
+    categoria: obterValorFormulario('categoria', elementos.produtoCategoria.value),
+    cor: obterValorFormulario('cor', elementos.produtoCor.value),
+    tamanho: obterValorFormulario('tamanho', elementos.produtoTamanho.value),
     quantidade,
     valorVenda
   };
+}
+
+function obterValorFormulario(campo, valor) {
+  const valorLimpo = limparTextoFormulario(valor);
+  const valorNormalizado = normalizarTexto(valorLimpo);
+
+  if (!valorNormalizado) {
+    return '';
+  }
+
+  const valorExistente = valoresUnicos(campo).find((opcao) => normalizarTexto(opcao) === valorNormalizado);
+  return valorExistente ?? valorLimpo;
+}
+
+function limparTextoFormulario(valor) {
+  return String(valor ?? '').trim().replace(/\s+/g, ' ');
 }
 
 async function confirmarExclusao(produto) {

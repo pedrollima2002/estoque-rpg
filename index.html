@@ -132,23 +132,28 @@
 
         <label for="produto-subcategoria">
           <span>Subcategoria</span>
-          <input id="produto-subcategoria" type="text" maxlength="80">
+          <input id="produto-subcategoria" type="text" maxlength="80" list="sugestoes-subcategoria" autocomplete="off">
         </label>
 
         <label for="produto-categoria">
           <span>Categoria</span>
-          <input id="produto-categoria" type="text" required maxlength="80">
+          <input id="produto-categoria" type="text" required maxlength="80" list="sugestoes-categoria" autocomplete="off">
         </label>
 
         <label for="produto-cor">
           <span>Cor</span>
-          <input id="produto-cor" type="text" required maxlength="80">
+          <input id="produto-cor" type="text" required maxlength="80" list="sugestoes-cor" autocomplete="off">
         </label>
 
         <label for="produto-tamanho">
           <span>Tamanho</span>
-          <input id="produto-tamanho" type="text" maxlength="40">
+          <input id="produto-tamanho" type="text" maxlength="40" list="sugestoes-tamanho" autocomplete="off">
         </label>
+
+        <datalist id="sugestoes-subcategoria"></datalist>
+        <datalist id="sugestoes-categoria"></datalist>
+        <datalist id="sugestoes-cor"></datalist>
+        <datalist id="sugestoes-tamanho"></datalist>
 
         <label for="produto-quantidade">
           <span>Quantidade</span>
