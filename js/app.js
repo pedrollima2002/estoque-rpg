@@ -23,7 +23,9 @@ const estado = {
   salvandoProdutos: new Set(),
   filtros: {
     busca: '',
+    buscaSubcategoria: '',
     categoria: 'Todos',
+    subcategoria: 'Todos',
     cor: 'Todos',
     tamanho: 'Todos',
     estoque: 'todos'
@@ -51,7 +53,9 @@ const elementos = {
   novoProdutoBtn: document.querySelector('#novo-produto-btn'),
   atualizarHistoricoBtn: document.querySelector('#atualizar-historico-btn'),
   busca: document.querySelector('#busca'),
+  buscaSubcategoria: document.querySelector('#busca-subcategoria'),
   filtroCategoria: document.querySelector('#filtro-categoria'),
+  filtroSubcategoria: document.querySelector('#filtro-subcategoria'),
   filtroCor: document.querySelector('#filtro-cor'),
   filtroTamanho: document.querySelector('#filtro-tamanho'),
   filtroEstoque: document.querySelector('#filtro-estoque'),
@@ -124,8 +128,14 @@ function configurarEventos() {
     renderizarProdutos();
   });
 
+  elementos.buscaSubcategoria.addEventListener('input', () => {
+    estado.filtros.buscaSubcategoria = elementos.buscaSubcategoria.value;
+    renderizarProdutos();
+  });
+
   [
     [elementos.filtroCategoria, 'categoria'],
+    [elementos.filtroSubcategoria, 'subcategoria'],
     [elementos.filtroCor, 'cor'],
     [elementos.filtroTamanho, 'tamanho'],
     [elementos.filtroEstoque, 'estoque']
@@ -139,6 +149,8 @@ function configurarEventos() {
   elementos.tabButtons.forEach((botao) => {
     botao.addEventListener('click', () => trocarAba(botao.dataset.tab));
   });
+
+  configurarAutocompletarFormulario();
 }
 
 async function aoEntrar(evento) {
@@ -235,6 +247,7 @@ function renderizarResumo() {
 
 function atualizarFiltros() {
   preencherFiltro(elementos.filtroCategoria, valoresUnicos('categoria'), estado.filtros.categoria);
+  preencherFiltro(elementos.filtroSubcategoria, valoresUnicos('subcategoria'), estado.filtros.subcategoria);
   preencherFiltro(elementos.filtroCor, valoresUnicos('cor'), estado.filtros.cor);
   preencherFiltro(elementos.filtroTamanho, valoresUnicos('tamanho'), estado.filtros.tamanho);
   elementos.filtroEstoque.value = estado.filtros.estoque;
@@ -262,16 +275,72 @@ function preencherFiltro(select, opcoes, valorAtual) {
 }
 
 function atualizarSugestoesFormulario() {
-  preencherSugestoes(elementos.sugestoesCategoria, valoresUnicos('categoria'));
-  preencherSugestoes(elementos.sugestoesSubcategoria, valoresUnicos('subcategoria'));
-  preencherSugestoes(elementos.sugestoesCor, valoresUnicos('cor'));
-  preencherSugestoes(elementos.sugestoesTamanho, valoresUnicos('tamanho'));
+  obterCamposAutocompletar().forEach(({ input, lista, campo }) => {
+    renderizarSugestoesCampo(input, lista, campo, '');
+  });
 }
 
-function preencherSugestoes(datalist, opcoes) {
-  datalist.innerHTML = opcoes
-    .map((opcao) => '<option value="' + escaparHtml(opcao) + '"></option>')
+function configurarAutocompletarFormulario() {
+  obterCamposAutocompletar().forEach(({ input, lista, campo }) => {
+    input.addEventListener('focus', () => mostrarSugestoesCampo(input, lista, campo, false));
+    input.addEventListener('click', () => mostrarSugestoesCampo(input, lista, campo, false));
+    input.addEventListener('input', () => mostrarSugestoesCampo(input, lista, campo, true));
+    input.addEventListener('keydown', (evento) => {
+      if (evento.key === 'Escape') {
+        fecharSugestoesFormulario();
+      }
+    });
+
+    lista.addEventListener('mousedown', (evento) => {
+      const botao = evento.target.closest('button[data-value]');
+
+      if (!botao) {
+        return;
+      }
+
+      evento.preventDefault();
+      input.value = botao.dataset.value;
+      fecharSugestoesFormulario();
+      input.focus();
+    });
+  });
+
+  document.addEventListener('click', (evento) => {
+    if (!evento.target.closest('.autocomplete-field')) {
+      fecharSugestoesFormulario();
+    }
+  });
+}
+
+function obterCamposAutocompletar() {
+  return [
+    { input: elementos.produtoCategoria, lista: elementos.sugestoesCategoria, campo: 'categoria' },
+    { input: elementos.produtoSubcategoria, lista: elementos.sugestoesSubcategoria, campo: 'subcategoria' },
+    { input: elementos.produtoCor, lista: elementos.sugestoesCor, campo: 'cor' },
+    { input: elementos.produtoTamanho, lista: elementos.sugestoesTamanho, campo: 'tamanho' }
+  ];
+}
+
+function mostrarSugestoesCampo(input, lista, campo, filtrarPorTexto) {
+  renderizarSugestoesCampo(input, lista, campo, filtrarPorTexto ? input.value : '');
+  lista.hidden = lista.children.length === 0;
+}
+
+function renderizarSugestoesCampo(input, lista, campo, textoFiltro) {
+  const termo = normalizarTexto(textoFiltro);
+  const opcoes = valoresUnicos(campo)
+    .filter((opcao) => !termo || normalizarTexto(opcao).includes(termo))
+    .slice(0, 80);
+
+  lista.innerHTML = opcoes
+    .map((opcao) => '<button type="button" data-value="' + escaparHtml(opcao) + '">' + escaparHtml(opcao) + '</button>')
     .join('');
+}
+
+function fecharSugestoesFormulario() {
+  obterCamposAutocompletar().forEach(({ lista }) => {
+    lista.hidden = true;
+  });
 }
 
 function renderizarProdutos() {
@@ -282,15 +351,18 @@ function renderizarProdutos() {
 
 function filtrarProdutos() {
   const termo = normalizarTexto(estado.filtros.busca);
+  const termoSubcategoria = normalizarTexto(estado.filtros.buscaSubcategoria);
 
   return estado.produtos.filter((produto) => {
     const nomeCombina = normalizarTexto(produto.nome).includes(termo);
     const categoriaCombina = estado.filtros.categoria === 'Todos' || produto.categoria === estado.filtros.categoria;
+    const subcategoriaCombina = estado.filtros.subcategoria === 'Todos' || produto.subcategoria === estado.filtros.subcategoria;
+    const buscaSubcategoriaCombina = normalizarTexto(produto.subcategoria).includes(termoSubcategoria);
     const corCombina = estado.filtros.cor === 'Todos' || produto.cor === estado.filtros.cor;
     const tamanhoCombina = estado.filtros.tamanho === 'Todos' || produto.tamanho === estado.filtros.tamanho;
     const estoqueCombina = filtrarPorEstoque(produto);
 
-    return nomeCombina && categoriaCombina && corCombina && tamanhoCombina && estoqueCombina;
+    return nomeCombina && categoriaCombina && subcategoriaCombina && buscaSubcategoriaCombina && corCombina && tamanhoCombina && estoqueCombina;
   });
 }
 
@@ -459,6 +531,8 @@ function abrirDialogProduto() {
 }
 
 function fecharFormularioProduto() {
+  fecharSugestoesFormulario();
+
   if (elementos.produtoDialog.open) {
     elementos.produtoDialog.close();
   } else {

@@ -70,9 +70,19 @@
             <input id="busca" type="search" placeholder="Nome do produto" autocomplete="off">
           </label>
 
+          <label class="subcategory-search-field" for="busca-subcategoria">
+            <span>Pesquisar subcategoria</span>
+            <input id="busca-subcategoria" type="search" placeholder="Nome da subcategoria" autocomplete="off">
+          </label>
+
           <label for="filtro-categoria">
             <span>Categoria</span>
             <select id="filtro-categoria"></select>
+          </label>
+
+          <label for="filtro-subcategoria">
+            <span>Subcategoria</span>
+            <select id="filtro-subcategoria"></select>
           </label>
 
           <label for="filtro-cor">
@@ -130,30 +140,29 @@
           <input id="produto-descricao" type="text" maxlength="160">
         </label>
 
-        <label for="produto-subcategoria">
+        <label class="autocomplete-field" for="produto-subcategoria">
           <span>Subcategoria</span>
-          <input id="produto-subcategoria" type="text" maxlength="80" list="sugestoes-subcategoria" autocomplete="off">
+          <input id="produto-subcategoria" type="text" maxlength="80" autocomplete="off">
+          <div id="sugestoes-subcategoria" class="suggestions-list" hidden></div>
         </label>
 
-        <label for="produto-categoria">
+        <label class="autocomplete-field" for="produto-categoria">
           <span>Categoria</span>
-          <input id="produto-categoria" type="text" required maxlength="80" list="sugestoes-categoria" autocomplete="off">
+          <input id="produto-categoria" type="text" required maxlength="80" autocomplete="off">
+          <div id="sugestoes-categoria" class="suggestions-list" hidden></div>
         </label>
 
-        <label for="produto-cor">
+        <label class="autocomplete-field" for="produto-cor">
           <span>Cor</span>
-          <input id="produto-cor" type="text" required maxlength="80" list="sugestoes-cor" autocomplete="off">
+          <input id="produto-cor" type="text" required maxlength="80" autocomplete="off">
+          <div id="sugestoes-cor" class="suggestions-list" hidden></div>
         </label>
 
-        <label for="produto-tamanho">
+        <label class="autocomplete-field" for="produto-tamanho">
           <span>Tamanho</span>
-          <input id="produto-tamanho" type="text" maxlength="40" list="sugestoes-tamanho" autocomplete="off">
+          <input id="produto-tamanho" type="text" maxlength="40" autocomplete="off">
+          <div id="sugestoes-tamanho" class="suggestions-list" hidden></div>
         </label>
-
-        <datalist id="sugestoes-subcategoria"></datalist>
-        <datalist id="sugestoes-categoria"></datalist>
-        <datalist id="sugestoes-cor"></datalist>
-        <datalist id="sugestoes-tamanho"></datalist>
 
         <label for="produto-quantidade">
           <span>Quantidade</span>
