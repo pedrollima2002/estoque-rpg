@@ -7,7 +7,9 @@ Criei este projeto para facilitar o controle de estoque da minha loja, a RPG Mul
 - Login com e-mail e senha.
 - Acesso restrito a usuários cadastrados.
 - Cadastro de novos produtos.
+- Cadastro de até 10 produtos de uma só vez.
 - Edição e exclusão de produtos.
+- Padronização dos textos dos produtos em letras maiúsculas antes de salvar.
 - Aumento e diminuição rápida da quantidade em estoque.
 - Confirmação antes de zerar um produto.
 - Busca por nome.
@@ -241,6 +243,16 @@ sql/adicionar-subcategoria-valor.sql
 ```
 
 Essa atualização não apaga produtos, histórico ou usuários.
+
+### Padronizar produtos antigos em maiúsculas
+
+Para converter produtos e nomes do histórico já cadastrados antes desta regra, use o arquivo:
+
+```text
+sql/padronizar-produtos-maiusculas.sql
+```
+
+Execute primeiro as consultas de conferência. Se os resultados estiverem corretos, execute os comandos de atualização definitiva.
 
 ### 3. Ativar autenticação
 

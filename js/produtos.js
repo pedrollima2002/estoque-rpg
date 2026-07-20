@@ -1,5 +1,5 @@
 import { supabase } from './supabase-config.js';
-import { registrarMovimentacao } from './historico.js';
+import { registrarMovimentacao, registrarMovimentacoes } from './historico.js';
 
 const CAMPOS_PRODUTO_BASE = [
   'id',
@@ -30,6 +30,10 @@ const CAMPOS_PRODUTO_COMPLETO = [
 let camposProdutoAtivos = CAMPOS_PRODUTO_COMPLETO;
 let produtoTemCamposExtras = true;
 
+function normalizarTexto(valor) {
+  return String(valor ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+}
+
 // Garante que os dados enviados ao Supabase estejam limpos e no formato correto.
 function prepararProduto(produto) {
   const valorVenda = produto.valorVenda === '' || produto.valorVenda === null || produto.valorVenda === undefined
@@ -37,16 +41,16 @@ function prepararProduto(produto) {
     : Number(produto.valorVenda);
 
   const produtoLimpo = {
-    nome: produto.nome.trim(),
-    descricao: produto.descricao.trim(),
-    categoria: produto.categoria.trim(),
-    cor: produto.cor.trim(),
-    tamanho: produto.tamanho.trim(),
+    nome: normalizarTexto(produto.nome),
+    descricao: normalizarTexto(produto.descricao),
+    categoria: normalizarTexto(produto.categoria),
+    cor: normalizarTexto(produto.cor),
+    tamanho: normalizarTexto(produto.tamanho),
     quantidade: Number(produto.quantidade)
   };
 
   if (produtoTemCamposExtras) {
-    produtoLimpo.subcategoria = produto.subcategoria.trim();
+    produtoLimpo.subcategoria = normalizarTexto(produto.subcategoria);
     produtoLimpo.valor_venda = valorVenda;
   }
 
@@ -95,30 +99,36 @@ export async function listarProdutos() {
 }
 
 export async function criarProduto(produto, usuario) {
-  const novoProduto = prepararProduto(produto);
+  const produtosCriados = await criarProdutos([produto], usuario);
+  return produtosCriados[0];
+}
+
+export async function criarProdutos(produtos, usuario) {
+  const novosProdutos = produtos.map(prepararProduto);
 
   const { data, error } = await supabase
     .from('produtos')
-    .insert(novoProduto)
-    .select(camposProdutoAtivos)
-    .single();
+    .insert(novosProdutos)
+    .select(camposProdutoAtivos);
 
   if (error) {
     throw error;
   }
 
-  const produtoCriado = normalizarProdutos([data])[0];
+  const produtosCriados = normalizarProdutos(data);
 
-  await registrarMovimentacao({
-    produtoId: produtoCriado.id,
-    produtoNome: produtoCriado.nome,
-    quantidadeAnterior: 0,
-    quantidadeNova: produtoCriado.quantidade,
-    tipo: 'entrada',
-    usuario
-  });
+  await registrarMovimentacoes(
+    produtosCriados.map((produtoCriado) => ({
+      produtoId: produtoCriado.id,
+      produtoNome: produtoCriado.nome,
+      quantidadeAnterior: 0,
+      quantidadeNova: produtoCriado.quantidade,
+      tipo: 'entrada',
+      usuario
+    }))
+  );
 
-  return produtoCriado;
+  return produtosCriados;
 }
 
 export async function editarProduto(produtoId, produto, produtoAnterior, usuario) {

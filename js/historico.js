@@ -12,6 +12,10 @@ const CAMPOS_HISTORICO = [
   'created_at'
 ].join(',');
 
+function normalizarTextoProduto(valor) {
+  return String(valor ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+}
+
 export async function listarMovimentacoes(limite = 50) {
   const { data, error } = await supabase
     .from('movimentacoes')
@@ -35,17 +39,28 @@ export async function registrarMovimentacao({
   tipo,
   usuario
 }) {
+  await registrarMovimentacoes([{
+    produtoId,
+    produtoNome,
+    quantidadeAnterior,
+    quantidadeNova,
+    tipo,
+    usuario
+  }]);
+}
+
+export async function registrarMovimentacoes(movimentacoes) {
   const { error } = await supabase
     .from('movimentacoes')
-    .insert({
-      produto_id: produtoId,
-      produto_nome: produtoNome,
-      quantidade_anterior: quantidadeAnterior,
-      quantidade_nova: quantidadeNova,
-      tipo,
-      usuario_id: usuario?.id ?? null,
-      usuario_email: usuario?.email ?? ''
-    });
+    .insert(movimentacoes.map((movimentacao) => ({
+      produto_id: movimentacao.produtoId,
+      produto_nome: normalizarTextoProduto(movimentacao.produtoNome),
+      quantidade_anterior: movimentacao.quantidadeAnterior,
+      quantidade_nova: movimentacao.quantidadeNova,
+      tipo: movimentacao.tipo,
+      usuario_id: movimentacao.usuario?.id ?? null,
+      usuario_email: movimentacao.usuario?.email ?? ''
+    })));
 
   if (error) {
     throw error;

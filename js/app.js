@@ -7,7 +7,7 @@ import {
 } from './auth.js';
 import {
   ajustarQuantidade,
-  criarProduto,
+  criarProdutos,
   editarProduto,
   excluirProduto,
   listarProdutos,
@@ -15,12 +15,16 @@ import {
 } from './produtos.js';
 import { listarMovimentacoes, observarMovimentacoes } from './historico.js';
 
+const LIMITE_PRODUTOS_FORMULARIO = 10;
+
 const estado = {
   usuario: null,
   produtos: [],
   movimentacoes: [],
   produtoEditando: null,
+  salvandoFormulario: false,
   salvandoProdutos: new Set(),
+  proximoFormularioId: 1,
   filtros: {
     busca: '',
     buscaSubcategoria: '',
@@ -69,18 +73,8 @@ const elementos = {
   produtoForm: document.querySelector('#produto-form'),
   produtoFormTitulo: document.querySelector('#produto-form-titulo'),
   produtoId: document.querySelector('#produto-id'),
-  produtoNome: document.querySelector('#produto-nome'),
-  produtoDescricao: document.querySelector('#produto-descricao'),
-  produtoSubcategoria: document.querySelector('#produto-subcategoria'),
-  produtoCategoria: document.querySelector('#produto-categoria'),
-  produtoCor: document.querySelector('#produto-cor'),
-  produtoTamanho: document.querySelector('#produto-tamanho'),
-  sugestoesSubcategoria: document.querySelector('#sugestoes-subcategoria'),
-  sugestoesCategoria: document.querySelector('#sugestoes-categoria'),
-  sugestoesCor: document.querySelector('#sugestoes-cor'),
-  sugestoesTamanho: document.querySelector('#sugestoes-tamanho'),
-  produtoQuantidade: document.querySelector('#produto-quantidade'),
-  produtoValorVenda: document.querySelector('#produto-valor-venda'),
+  produtosFormLista: document.querySelector('#produtos-form-lista'),
+  adicionarProdutoLinhaBtn: document.querySelector('#adicionar-produto-linha-btn'),
   salvarProdutoBtn: document.querySelector('#salvar-produto-btn'),
   cancelarProdutoBtn: document.querySelector('#cancelar-produto-btn'),
   fecharModalBtn: document.querySelector('#fechar-modal-btn')
@@ -91,7 +85,6 @@ iniciarAplicativo();
 async function iniciarAplicativo() {
   configurarEventos();
 
-  // Sem URL/chave do Supabase, o app não tenta autenticar nem mostrar o estoque.
   if (!supabaseConfigurado) {
     mostrarTelaLogin();
     elementos.configAlert.hidden = false;
@@ -122,6 +115,18 @@ function configurarEventos() {
   elementos.fecharModalBtn.addEventListener('click', fecharFormularioProduto);
   elementos.atualizarHistoricoBtn.addEventListener('click', carregarHistorico);
   elementos.produtosLista.addEventListener('click', aoClicarProduto);
+  elementos.adicionarProdutoLinhaBtn.addEventListener('click', () => adicionarLinhaProduto());
+  elementos.produtosFormLista.addEventListener('click', aoClicarFormularioProdutos);
+  elementos.produtosFormLista.addEventListener('focusin', aoFocarFormularioProdutos);
+  elementos.produtosFormLista.addEventListener('input', aoDigitarFormularioProdutos);
+  elementos.produtosFormLista.addEventListener('keydown', aoTeclarFormularioProdutos);
+  elementos.produtosFormLista.addEventListener('mousedown', aoSelecionarSugestaoFormulario);
+
+  document.addEventListener('click', (evento) => {
+    if (!evento.target.closest('#produto-form')) {
+      fecharSugestoesFormulario();
+    }
+  });
 
   elementos.busca.addEventListener('input', () => {
     estado.filtros.busca = elementos.busca.value;
@@ -149,8 +154,6 @@ function configurarEventos() {
   elementos.tabButtons.forEach((botao) => {
     botao.addEventListener('click', () => trocarAba(botao.dataset.tab));
   });
-
-  configurarAutocompletarFormulario();
 }
 
 async function aoEntrar(evento) {
@@ -246,10 +249,10 @@ function renderizarResumo() {
 }
 
 function atualizarFiltros() {
-  preencherFiltro(elementos.filtroCategoria, valoresUnicos('categoria'), estado.filtros.categoria);
-  preencherFiltro(elementos.filtroSubcategoria, valoresUnicos('subcategoria'), estado.filtros.subcategoria);
-  preencherFiltro(elementos.filtroCor, valoresUnicos('cor'), estado.filtros.cor);
-  preencherFiltro(elementos.filtroTamanho, valoresUnicos('tamanho'), estado.filtros.tamanho);
+  estado.filtros.categoria = preencherFiltro(elementos.filtroCategoria, valoresUnicos('categoria'), estado.filtros.categoria);
+  estado.filtros.subcategoria = preencherFiltro(elementos.filtroSubcategoria, valoresUnicos('subcategoria'), estado.filtros.subcategoria);
+  estado.filtros.cor = preencherFiltro(elementos.filtroCor, valoresUnicos('cor'), estado.filtros.cor);
+  estado.filtros.tamanho = preencherFiltro(elementos.filtroTamanho, valoresUnicos('tamanho'), estado.filtros.tamanho);
   elementos.filtroEstoque.value = estado.filtros.estoque;
 }
 
@@ -272,75 +275,7 @@ function preencherFiltro(select, opcoes, valorAtual) {
 
   select.innerHTML = html;
   select.value = valorSelecionado;
-}
-
-function atualizarSugestoesFormulario() {
-  obterCamposAutocompletar().forEach(({ input, lista, campo }) => {
-    renderizarSugestoesCampo(input, lista, campo, '');
-  });
-}
-
-function configurarAutocompletarFormulario() {
-  obterCamposAutocompletar().forEach(({ input, lista, campo }) => {
-    input.addEventListener('focus', () => mostrarSugestoesCampo(input, lista, campo, false));
-    input.addEventListener('click', () => mostrarSugestoesCampo(input, lista, campo, false));
-    input.addEventListener('input', () => mostrarSugestoesCampo(input, lista, campo, true));
-    input.addEventListener('keydown', (evento) => {
-      if (evento.key === 'Escape') {
-        fecharSugestoesFormulario();
-      }
-    });
-
-    lista.addEventListener('mousedown', (evento) => {
-      const botao = evento.target.closest('button[data-value]');
-
-      if (!botao) {
-        return;
-      }
-
-      evento.preventDefault();
-      input.value = botao.dataset.value;
-      fecharSugestoesFormulario();
-      input.focus();
-    });
-  });
-
-  document.addEventListener('click', (evento) => {
-    if (!evento.target.closest('.autocomplete-field')) {
-      fecharSugestoesFormulario();
-    }
-  });
-}
-
-function obterCamposAutocompletar() {
-  return [
-    { input: elementos.produtoCategoria, lista: elementos.sugestoesCategoria, campo: 'categoria' },
-    { input: elementos.produtoSubcategoria, lista: elementos.sugestoesSubcategoria, campo: 'subcategoria' },
-    { input: elementos.produtoCor, lista: elementos.sugestoesCor, campo: 'cor' },
-    { input: elementos.produtoTamanho, lista: elementos.sugestoesTamanho, campo: 'tamanho' }
-  ];
-}
-
-function mostrarSugestoesCampo(input, lista, campo, filtrarPorTexto) {
-  renderizarSugestoesCampo(input, lista, campo, filtrarPorTexto ? input.value : '');
-  lista.hidden = lista.children.length === 0;
-}
-
-function renderizarSugestoesCampo(input, lista, campo, textoFiltro) {
-  const termo = normalizarTexto(textoFiltro);
-  const opcoes = valoresUnicos(campo)
-    .filter((opcao) => !termo || normalizarTexto(opcao).includes(termo))
-    .slice(0, 80);
-
-  lista.innerHTML = opcoes
-    .map((opcao) => '<button type="button" data-value="' + escaparHtml(opcao) + '">' + escaparHtml(opcao) + '</button>')
-    .join('');
-}
-
-function fecharSugestoesFormulario() {
-  obterCamposAutocompletar().forEach(({ lista }) => {
-    lista.hidden = true;
-  });
+  return valorSelecionado;
 }
 
 function renderizarProdutos() {
@@ -350,14 +285,14 @@ function renderizarProdutos() {
 }
 
 function filtrarProdutos() {
-  const termo = normalizarTexto(estado.filtros.busca);
-  const termoSubcategoria = normalizarTexto(estado.filtros.buscaSubcategoria);
+  const termo = normalizarBusca(estado.filtros.busca);
+  const termoSubcategoria = normalizarBusca(estado.filtros.buscaSubcategoria);
 
   return estado.produtos.filter((produto) => {
-    const nomeCombina = normalizarTexto(produto.nome).includes(termo);
+    const nomeCombina = normalizarBusca(produto.nome).includes(termo);
     const categoriaCombina = estado.filtros.categoria === 'Todos' || produto.categoria === estado.filtros.categoria;
     const subcategoriaCombina = estado.filtros.subcategoria === 'Todos' || produto.subcategoria === estado.filtros.subcategoria;
-    const buscaSubcategoriaCombina = normalizarTexto(produto.subcategoria).includes(termoSubcategoria);
+    const buscaSubcategoriaCombina = normalizarBusca(produto.subcategoria).includes(termoSubcategoria);
     const corCombina = estado.filtros.cor === 'Todos' || produto.cor === estado.filtros.cor;
     const tamanhoCombina = estado.filtros.tamanho === 'Todos' || produto.tamanho === estado.filtros.tamanho;
     const estoqueCombina = filtrarPorEstoque(produto);
@@ -476,7 +411,6 @@ async function aoClicarProduto(evento) {
   }
 }
 
-// Este controle evita cliques repetidos no mesmo produto enquanto a alteração é salva.
 async function alterarQuantidade(produto, delta) {
   if (estado.salvandoProdutos.has(produto.id)) {
     return;
@@ -498,10 +432,10 @@ async function alterarQuantidade(produto, delta) {
 function abrirFormularioNovoProduto() {
   estado.produtoEditando = null;
   elementos.produtoFormTitulo.textContent = 'Novo produto';
-  elementos.produtoForm.reset();
   elementos.produtoId.value = '';
-  elementos.produtoQuantidade.value = '0';
-  elementos.produtoValorVenda.value = '';
+  limparLinhasProduto();
+  adicionarLinhaProduto({ quantidade: 0 }, false);
+  definirFormularioSalvando(false);
   abrirDialogProduto();
 }
 
@@ -509,14 +443,18 @@ function abrirFormularioEditarProduto(produto) {
   estado.produtoEditando = produto;
   elementos.produtoFormTitulo.textContent = 'Editar produto';
   elementos.produtoId.value = produto.id;
-  elementos.produtoNome.value = produto.nome;
-  elementos.produtoDescricao.value = produto.descricao ?? '';
-  elementos.produtoSubcategoria.value = produto.subcategoria ?? '';
-  elementos.produtoCategoria.value = produto.categoria ?? '';
-  elementos.produtoCor.value = produto.cor ?? '';
-  elementos.produtoTamanho.value = produto.tamanho ?? '';
-  elementos.produtoQuantidade.value = produto.quantidade;
-  elementos.produtoValorVenda.value = produto.valor_venda ?? '';
+  limparLinhasProduto();
+  adicionarLinhaProduto({
+    nome: produto.nome,
+    descricao: produto.descricao ?? '',
+    subcategoria: produto.subcategoria ?? '',
+    categoria: produto.categoria ?? '',
+    cor: produto.cor ?? '',
+    tamanho: produto.tamanho ?? '',
+    quantidade: produto.quantidade,
+    valorVenda: produto.valor_venda ?? ''
+  }, false, true);
+  definirFormularioSalvando(false);
   abrirDialogProduto();
 }
 
@@ -527,7 +465,8 @@ function abrirDialogProduto() {
     elementos.produtoDialog.hidden = false;
   }
 
-  elementos.produtoNome.focus();
+  const primeiroCampo = elementos.produtosFormLista.querySelector('[data-field="nome"]');
+  primeiroCampo?.focus();
 }
 
 function fecharFormularioProduto() {
@@ -540,23 +479,237 @@ function fecharFormularioProduto() {
   }
 }
 
+function limparLinhasProduto() {
+  elementos.produtosFormLista.innerHTML = '';
+  estado.proximoFormularioId = 1;
+}
+
+function adicionarLinhaProduto(valores = {}, focar = true, forcar = false) {
+  if (!forcar && (estado.produtoEditando || obterLinhasProdutoFormulario().length >= LIMITE_PRODUTOS_FORMULARIO)) {
+    return;
+  }
+
+  elementos.produtosFormLista.insertAdjacentHTML('beforeend', montarLinhaProduto(valores));
+  atualizarNumeracaoLinhasProduto();
+  atualizarBotaoAdicionarLinha();
+
+  if (focar) {
+    const linhas = obterLinhasProdutoFormulario();
+    linhas[linhas.length - 1]?.querySelector('[data-field="nome"]')?.focus();
+  }
+}
+
+function montarLinhaProduto(valores = {}) {
+  const rowId = estado.proximoFormularioId++;
+
+  let html = '';
+  html += '<article class="product-form-card" data-product-row>';
+  html += '<div class="product-form-header">';
+  html += '<h3>Produto</h3>';
+  html += '<button class="ghost-button remove-row-button" type="button" data-action="remover-linha">Remover produto</button>';
+  html += '</div>';
+  html += '<div class="form-grid">';
+  html += montarCampoTexto(rowId, 'nome', 'Nome do produto', valores.nome, 120, false, true);
+  html += montarCampoTexto(rowId, 'descricao', 'Descrição ou variação', valores.descricao, 160);
+  html += montarCampoTexto(rowId, 'subcategoria', 'Subcategoria', valores.subcategoria, 80, true);
+  html += montarCampoTexto(rowId, 'categoria', 'Categoria', valores.categoria, 80, true, true);
+  html += montarCampoTexto(rowId, 'cor', 'Cor', valores.cor, 80, true, true);
+  html += montarCampoTexto(rowId, 'tamanho', 'Tamanho', valores.tamanho, 40, true);
+  html += montarCampoNumero(rowId, 'quantidade', 'Quantidade', valores.quantidade ?? 0, '1', true);
+  html += montarCampoNumero(rowId, 'valorVenda', 'Valor de venda', valores.valorVenda ?? valores.valor_venda ?? '', '0.01', false);
+  html += '</div>';
+  html += '<p class="row-error" aria-live="polite" hidden></p>';
+  html += '</article>';
+
+  return html;
+}
+
+function montarCampoTexto(rowId, campo, rotulo, valor = '', maxLength, autocomplete = false, obrigatorio = false) {
+  const id = 'produto-' + rowId + '-' + campo;
+  const classeLabel = autocomplete ? ' class="autocomplete-field"' : '';
+  const autocompleteCampo = autocomplete ? ' data-autocomplete-field="' + escaparAtributo(campo) + '"' : '';
+  const ariaObrigatorio = obrigatorio ? ' aria-required="true"' : '';
+  const sugestoes = autocomplete ? '<div class="suggestions-list" hidden></div>' : '';
+
+  return (
+    '<label' + classeLabel + ' for="' + escaparAtributo(id) + '">' +
+      '<span>' + escaparHtml(rotulo) + '</span>' +
+      '<input id="' + escaparAtributo(id) + '" class="produto-input" data-field="' + escaparAtributo(campo) + '" type="text" maxlength="' + maxLength + '" value="' + escaparAtributo(valor) + '" autocomplete="off"' + autocompleteCampo + ariaObrigatorio + '>' +
+      sugestoes +
+    '</label>'
+  );
+}
+
+function montarCampoNumero(rowId, campo, rotulo, valor = '', step = '1', obrigatorio = false) {
+  const id = 'produto-' + rowId + '-' + campo;
+  const inputmode = step === '0.01' ? ' inputmode="decimal"' : '';
+  const ariaObrigatorio = obrigatorio ? ' aria-required="true"' : '';
+
+  return (
+    '<label for="' + escaparAtributo(id) + '">' +
+      '<span>' + escaparHtml(rotulo) + '</span>' +
+      '<input id="' + escaparAtributo(id) + '" class="produto-input" data-field="' + escaparAtributo(campo) + '" type="number" min="0" step="' + escaparAtributo(step) + '" value="' + escaparAtributo(valor) + '"' + inputmode + ariaObrigatorio + '>' +
+    '</label>'
+  );
+}
+
+function atualizarNumeracaoLinhasProduto() {
+  const editando = Boolean(estado.produtoEditando);
+
+  obterLinhasProdutoFormulario().forEach((linha, indice) => {
+    linha.dataset.index = String(indice + 1);
+    linha.querySelector('.product-form-header h3').textContent = 'Produto ' + (indice + 1);
+
+    const removerBtn = linha.querySelector('[data-action="remover-linha"]');
+    removerBtn.hidden = editando || indice === 0;
+  });
+}
+
+function atualizarBotaoAdicionarLinha() {
+  const totalLinhas = obterLinhasProdutoFormulario().length;
+  const chegouNoLimite = totalLinhas >= LIMITE_PRODUTOS_FORMULARIO;
+
+  elementos.adicionarProdutoLinhaBtn.hidden = Boolean(estado.produtoEditando);
+  elementos.adicionarProdutoLinhaBtn.disabled = estado.salvandoFormulario || chegouNoLimite;
+  elementos.adicionarProdutoLinhaBtn.textContent = chegouNoLimite ? 'Limite de 10 produtos' : '+ Adicionar outro produto';
+}
+
+function obterLinhasProdutoFormulario() {
+  return Array.from(elementos.produtosFormLista.querySelectorAll('[data-product-row]'));
+}
+
+function aoClicarFormularioProdutos(evento) {
+  const removerBtn = evento.target.closest('[data-action="remover-linha"]');
+
+  if (removerBtn) {
+    removerLinhaProduto(removerBtn.closest('[data-product-row]'));
+    return;
+  }
+
+  const campoAutocomplete = evento.target.closest('input[data-autocomplete-field]');
+  if (campoAutocomplete) {
+    mostrarSugestoesCampo(campoAutocomplete, false);
+  }
+}
+
+function aoFocarFormularioProdutos(evento) {
+  const campoAutocomplete = evento.target.closest('input[data-autocomplete-field]');
+  if (campoAutocomplete) {
+    mostrarSugestoesCampo(campoAutocomplete, false);
+  }
+}
+
+function aoDigitarFormularioProdutos(evento) {
+  const linha = evento.target.closest('[data-product-row]');
+  if (linha) {
+    limparErroLinha(linha);
+    evento.target.removeAttribute('aria-invalid');
+  }
+
+  const campoAutocomplete = evento.target.closest('input[data-autocomplete-field]');
+  if (campoAutocomplete) {
+    mostrarSugestoesCampo(campoAutocomplete, true);
+  }
+}
+
+function aoTeclarFormularioProdutos(evento) {
+  if (evento.key === 'Escape') {
+    fecharSugestoesFormulario();
+  }
+}
+
+function aoSelecionarSugestaoFormulario(evento) {
+  const botao = evento.target.closest('button[data-suggestion-value]');
+
+  if (!botao) {
+    return;
+  }
+
+  evento.preventDefault();
+  const campo = botao.closest('.autocomplete-field')?.querySelector('input[data-autocomplete-field]');
+
+  if (!campo) {
+    return;
+  }
+
+  campo.value = botao.dataset.suggestionValue;
+  limparErroLinha(campo.closest('[data-product-row]'));
+  fecharSugestoesFormulario();
+  campo.focus();
+}
+
+function removerLinhaProduto(linha) {
+  if (!linha || estado.produtoEditando || obterLinhasProdutoFormulario().length <= 1) {
+    return;
+  }
+
+  linha.remove();
+  atualizarNumeracaoLinhasProduto();
+  atualizarBotaoAdicionarLinha();
+}
+
+function atualizarSugestoesFormulario() {
+  elementos.produtosFormLista
+    .querySelectorAll('input[data-autocomplete-field]')
+    .forEach((input) => renderizarSugestoesCampo(input, ''));
+}
+
+function mostrarSugestoesCampo(input, filtrarPorTexto) {
+  const lista = renderizarSugestoesCampo(input, filtrarPorTexto ? input.value : '');
+  fecharSugestoesFormulario(lista);
+  lista.hidden = lista.children.length === 0;
+}
+
+function renderizarSugestoesCampo(input, textoFiltro) {
+  const lista = input.closest('.autocomplete-field')?.querySelector('.suggestions-list');
+
+  if (!lista) {
+    return null;
+  }
+
+  const campo = input.dataset.autocompleteField;
+  const termo = normalizarBusca(textoFiltro);
+  const opcoes = valoresUnicos(campo)
+    .filter((opcao) => !termo || normalizarBusca(opcao).includes(termo))
+    .slice(0, 80);
+
+  lista.innerHTML = opcoes
+    .map((opcao) => '<button type="button" data-suggestion-value="' + escaparAtributo(opcao) + '">' + escaparHtml(opcao) + '</button>')
+    .join('');
+
+  return lista;
+}
+
+function fecharSugestoesFormulario(listaMantida = null) {
+  elementos.produtosFormLista.querySelectorAll('.suggestions-list').forEach((lista) => {
+    if (lista !== listaMantida) {
+      lista.hidden = true;
+    }
+  });
+}
+
 async function aoSalvarProduto(evento) {
   evento.preventDefault();
-  const produto = lerProdutoDoFormulario();
 
-  if (!produto) {
+  if (estado.salvandoFormulario) {
+    return;
+  }
+
+  const produtos = lerProdutosDoFormulario();
+
+  if (!produtos) {
     return;
   }
 
   try {
-    elementos.salvarProdutoBtn.disabled = true;
+    definirFormularioSalvando(true);
 
     if (estado.produtoEditando) {
-      await editarProduto(estado.produtoEditando.id, produto, estado.produtoEditando, estado.usuario);
+      await editarProduto(estado.produtoEditando.id, produtos[0], estado.produtoEditando, estado.usuario);
       mostrarMensagem('Produto editado com sucesso.', 'success');
     } else {
-      await criarProduto(produto, estado.usuario);
-      mostrarMensagem('Produto cadastrado com sucesso.', 'success');
+      const produtosCriados = await criarProdutos(produtos, estado.usuario);
+      mostrarMensagem(montarMensagemCadastroSucesso(produtosCriados.length), 'success');
     }
 
     fecharFormularioProduto();
@@ -565,50 +718,192 @@ async function aoSalvarProduto(evento) {
   } catch (erro) {
     mostrarMensagem(traduzirErro(erro), 'error');
   } finally {
-    elementos.salvarProdutoBtn.disabled = false;
+    definirFormularioSalvando(false);
   }
 }
 
-function lerProdutoDoFormulario() {
-  const quantidade = Number(elementos.produtoQuantidade.value);
-  const valorVendaTexto = elementos.produtoValorVenda.value.trim();
-  const valorVenda = valorVendaTexto === '' ? '' : Number(valorVendaTexto);
+function definirFormularioSalvando(salvando) {
+  estado.salvandoFormulario = salvando;
+  elementos.salvarProdutoBtn.disabled = salvando;
+  elementos.salvarProdutoBtn.textContent = obterTextoBotaoSalvar(salvando);
+  atualizarBotaoAdicionarLinha();
+}
 
-  if (!elementos.produtoForm.reportValidity()) {
+function obterTextoBotaoSalvar(salvando = false) {
+  if (salvando) {
+    return estado.produtoEditando ? 'Salvando...' : 'Cadastrando...';
+  }
+
+  return estado.produtoEditando ? 'Salvar' : 'Cadastrar produtos';
+}
+
+function montarMensagemCadastroSucesso(total) {
+  return total === 1
+    ? '1 PRODUTO CADASTRADO COM SUCESSO!'
+    : total + ' PRODUTOS CADASTRADOS COM SUCESSO!';
+}
+
+function lerProdutosDoFormulario() {
+  limparErrosFormulario();
+
+  const linhas = obterLinhasProdutoFormulario();
+  const produtos = [];
+
+  for (let indice = 0; indice < linhas.length; indice += 1) {
+    const linha = linhas[indice];
+    const dados = lerDadosLinha(linha);
+    const numeroProduto = indice + 1;
+
+    if (!estado.produtoEditando && linhaEstaVazia(dados)) {
+      continue;
+    }
+
+    const resultado = validarDadosLinha(dados, numeroProduto);
+
+    if (resultado.erro) {
+      mostrarErroLinha(linha, resultado.erro, resultado.campo);
+      return null;
+    }
+
+    produtos.push(resultado.produto);
+  }
+
+  if (produtos.length === 0) {
+    const primeiraLinha = linhas[0];
+    mostrarErroLinha(primeiraLinha, 'O PRODUTO 1 ESTÁ INCOMPLETO. PREENCHA OS CAMPOS OBRIGATÓRIOS.', 'nome');
     return null;
   }
+
+  return produtos;
+}
+
+function lerDadosLinha(linha) {
+  const dados = {};
+
+  linha.querySelectorAll('[data-field]').forEach((campo) => {
+    dados[campo.dataset.field] = campo.value;
+  });
+
+  return dados;
+}
+
+function linhaEstaVazia(dados) {
+  const textosVazios = [
+    dados.nome,
+    dados.descricao,
+    dados.subcategoria,
+    dados.categoria,
+    dados.cor,
+    dados.tamanho,
+    dados.valorVenda
+  ].every((valor) => limparTextoFormulario(valor) === '');
+
+  const quantidade = limparTextoFormulario(dados.quantidade);
+  const quantidadeVazia = quantidade === '' || quantidade === '0';
+
+  return textosVazios && quantidadeVazia;
+}
+
+function validarDadosLinha(dados, numeroProduto) {
+  const nome = limparTextoFormulario(dados.nome);
+  const categoria = limparTextoFormulario(dados.categoria);
+  const cor = limparTextoFormulario(dados.cor);
+  const quantidadeTexto = limparTextoFormulario(dados.quantidade);
+  const valorVendaTexto = limparTextoFormulario(dados.valorVenda);
+
+  const camposFaltando = [];
+
+  if (!nome) camposFaltando.push({ campo: 'nome', rotulo: 'NOME DO PRODUTO' });
+  if (!categoria) camposFaltando.push({ campo: 'categoria', rotulo: 'CATEGORIA' });
+  if (!cor) camposFaltando.push({ campo: 'cor', rotulo: 'COR' });
+  if (!quantidadeTexto) camposFaltando.push({ campo: 'quantidade', rotulo: 'QUANTIDADE' });
+
+  if (camposFaltando.length > 0) {
+    return {
+      erro: 'O PRODUTO ' + numeroProduto + ' ESTÁ INCOMPLETO. PREENCHA: ' + camposFaltando.map((campo) => campo.rotulo).join(', ') + '.',
+      campo: camposFaltando[0].campo
+    };
+  }
+
+  const quantidade = Number(quantidadeTexto);
 
   if (!Number.isInteger(quantidade) || quantidade < 0) {
-    mostrarMensagem('A quantidade deve ser um número inteiro maior ou igual a zero.', 'error');
-    return null;
+    return {
+      erro: 'O PRODUTO ' + numeroProduto + ' TEM QUANTIDADE INVÁLIDA. USE UM NÚMERO INTEIRO MAIOR OU IGUAL A ZERO.',
+      campo: 'quantidade'
+    };
   }
 
+  const valorVenda = valorVendaTexto === '' ? '' : Number(valorVendaTexto);
+
   if (valorVenda !== '' && (Number.isNaN(valorVenda) || valorVenda < 0)) {
-    mostrarMensagem('O valor de venda deve ser maior ou igual a zero.', 'error');
-    return null;
+    return {
+      erro: 'O PRODUTO ' + numeroProduto + ' TEM VALOR DE VENDA INVÁLIDO. USE UM VALOR MAIOR OU IGUAL A ZERO.',
+      campo: 'valorVenda'
+    };
   }
 
   return {
-    nome: elementos.produtoNome.value,
-    descricao: elementos.produtoDescricao.value,
-    subcategoria: obterValorFormulario('subcategoria', elementos.produtoSubcategoria.value),
-    categoria: obterValorFormulario('categoria', elementos.produtoCategoria.value),
-    cor: obterValorFormulario('cor', elementos.produtoCor.value),
-    tamanho: obterValorFormulario('tamanho', elementos.produtoTamanho.value),
-    quantidade,
-    valorVenda
+    produto: {
+      nome,
+      descricao: limparTextoFormulario(dados.descricao),
+      subcategoria: obterValorFormulario('subcategoria', dados.subcategoria),
+      categoria: obterValorFormulario('categoria', dados.categoria),
+      cor: obterValorFormulario('cor', dados.cor),
+      tamanho: obterValorFormulario('tamanho', dados.tamanho),
+      quantidade,
+      valorVenda
+    }
   };
+}
+
+function mostrarErroLinha(linha, mensagem, campo) {
+  if (!linha) {
+    mostrarMensagem(mensagem, 'error');
+    return;
+  }
+
+  linha.classList.add('has-error');
+
+  const aviso = linha.querySelector('.row-error');
+  aviso.textContent = mensagem;
+  aviso.hidden = false;
+
+  const campoComErro = linha.querySelector('[data-field="' + campo + '"]');
+  campoComErro?.setAttribute('aria-invalid', 'true');
+  campoComErro?.focus();
+  linha.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  mostrarMensagem(mensagem, 'error');
+}
+
+function limparErrosFormulario() {
+  obterLinhasProdutoFormulario().forEach((linha) => limparErroLinha(linha));
+}
+
+function limparErroLinha(linha) {
+  if (!linha) {
+    return;
+  }
+
+  linha.classList.remove('has-error');
+  linha.querySelectorAll('[aria-invalid="true"]').forEach((campo) => campo.removeAttribute('aria-invalid'));
+
+  const aviso = linha.querySelector('.row-error');
+  if (aviso) {
+    aviso.textContent = '';
+    aviso.hidden = true;
+  }
 }
 
 function obterValorFormulario(campo, valor) {
   const valorLimpo = limparTextoFormulario(valor);
-  const valorNormalizado = normalizarTexto(valorLimpo);
+  const valorNormalizado = normalizarBusca(valorLimpo);
 
   if (!valorNormalizado) {
     return '';
   }
 
-  const valorExistente = valoresUnicos(campo).find((opcao) => normalizarTexto(opcao) === valorNormalizado);
+  const valorExistente = valoresUnicos(campo).find((opcao) => normalizarBusca(opcao) === valorNormalizado);
   return valorExistente ?? valorLimpo;
 }
 
@@ -671,7 +966,6 @@ function trocarAba(aba) {
   }
 }
 
-// O Realtime recarrega produtos e histórico quando outro sócio altera o estoque.
 function iniciarRealtime() {
   pararRealtime();
 
@@ -730,8 +1024,7 @@ function traduzirErro(erro) {
   return mensagem;
 }
 
-// Remove acentos da busca para encontrar produtos com ou sem acentuação.
-function normalizarTexto(valor) {
+function normalizarBusca(valor) {
   return String(valor ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -746,6 +1039,10 @@ function escaparHtml(valor) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function escaparAtributo(valor) {
+  return escaparHtml(valor);
 }
 
 function formatarData(dataIso) {
