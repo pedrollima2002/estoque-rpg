@@ -64,49 +64,59 @@
           <button id="novo-produto-btn" class="primary-button add-product-button" type="button">+ Novo produto</button>
         </div>
 
-        <div class="filters">
-          <label class="search-field" for="busca">
-            <span>Pesquisar</span>
-            <input id="busca" type="search" placeholder="Nome do produto" autocomplete="off">
+        <section id="categorias-view" class="category-view">
+          <label class="category-search-field" for="busca-categoria">
+            <span>Pesquisar categoria</span>
+            <input id="busca-categoria" type="search" placeholder="Nome da categoria" autocomplete="off">
           </label>
 
-          <label class="subcategory-search-field" for="busca-subcategoria">
-            <span>Pesquisar subcategoria</span>
-            <input id="busca-subcategoria" type="search" placeholder="Nome da subcategoria" autocomplete="off">
-          </label>
+          <div id="categorias-lista" class="category-list" aria-live="polite"></div>
+          <p id="categorias-vazio" class="empty-state" hidden>Nenhuma categoria encontrada.</p>
+        </section>
 
-          <label for="filtro-categoria">
-            <span>Categoria</span>
-            <select id="filtro-categoria"></select>
-          </label>
+        <section id="produtos-view" class="products-view" hidden>
+          <div class="folder-heading">
+            <button id="voltar-categorias-btn" class="ghost-button" type="button">Voltar para categorias</button>
+            <div>
+              <p class="brand-kicker">Categoria</p>
+              <h2 id="categoria-atual-titulo">Produtos</h2>
+            </div>
+          </div>
 
-          <label for="filtro-subcategoria">
-            <span>Subcategoria</span>
-            <select id="filtro-subcategoria"></select>
-          </label>
+          <div class="filters">
+            <label class="search-field" for="busca">
+              <span>Pesquisar produto</span>
+              <input id="busca" type="search" placeholder="Nome do produto" autocomplete="off">
+            </label>
 
-          <label for="filtro-cor">
-            <span>Cor</span>
-            <select id="filtro-cor"></select>
-          </label>
+            <label for="filtro-subcategoria">
+              <span>Subcategoria</span>
+              <select id="filtro-subcategoria"></select>
+            </label>
 
-          <label for="filtro-tamanho">
-            <span>Tamanho</span>
-            <select id="filtro-tamanho"></select>
-          </label>
+            <label for="filtro-cor">
+              <span>Cor</span>
+              <select id="filtro-cor"></select>
+            </label>
 
-          <label for="filtro-estoque">
-            <span>Estoque</span>
-            <select id="filtro-estoque">
-              <option value="todos">Todos</option>
-              <option value="baixo">Estoque baixo</option>
-              <option value="zerado">Sem estoque</option>
-            </select>
-          </label>
-        </div>
+            <label for="filtro-tamanho">
+              <span>Tamanho</span>
+              <select id="filtro-tamanho"></select>
+            </label>
 
-        <div id="produtos-lista" class="products-list" aria-live="polite"></div>
-        <p id="produtos-vazio" class="empty-state" hidden>Nenhum produto encontrado.</p>
+            <label for="filtro-estoque">
+              <span>Estoque</span>
+              <select id="filtro-estoque">
+                <option value="todos">Todos</option>
+                <option value="baixo">Estoque baixo</option>
+                <option value="zerado">Sem estoque</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="produtos-lista" class="products-list" aria-live="polite"></div>
+          <p id="produtos-vazio" class="empty-state" hidden>Nenhum produto encontrado.</p>
+        </section>
       </section>
 
       <section id="historico-section" class="content-section" hidden>
@@ -130,9 +140,14 @@
       <input id="produto-id" type="hidden">
       <div id="produtos-form-lista" class="multi-product-list"></div>
 
-      <button id="adicionar-produto-linha-btn" class="ghost-button add-row-button" type="button">
-        + Adicionar outro produto
-      </button>
+      <div class="row-tools">
+        <button id="adicionar-produto-linha-btn" class="ghost-button add-row-button" type="button">
+          + Produto vazio
+        </button>
+        <button id="copiar-produto-linha-btn" class="ghost-button add-row-button" type="button">
+          Copiar produto anterior
+        </button>
+      </div>
 
       <div class="form-actions">
         <button id="cancelar-produto-btn" class="ghost-button" type="button">Cancelar</button>

@@ -277,18 +277,83 @@ select:focus {
 
 .filters {
   display: grid;
-  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
   gap: 10px;
   align-items: end;
 }
 
-.search-field,
-.subcategory-search-field {
+.search-field {
   grid-column: span 2;
 }
 
 .filters label {
   font-size: 0.82rem;
+}
+
+.category-view,
+.products-view {
+  display: grid;
+  gap: 14px;
+}
+
+.category-search-field {
+  max-width: 520px;
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.category-card {
+  min-height: 128px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--cinza-200);
+  border-left: 5px solid var(--azul-900);
+  border-radius: var(--raio);
+  background: var(--branco);
+  color: var(--cinza-950);
+  padding: 14px;
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(15, 39, 66, 0.08);
+}
+
+.category-card:hover,
+.category-card:focus {
+  border-color: var(--azul-800);
+  box-shadow: 0 0 0 3px rgba(21, 57, 95, 0.12), 0 8px 20px rgba(15, 39, 66, 0.08);
+}
+
+.category-card strong {
+  color: var(--azul-900);
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.category-card span,
+.category-card small {
+  color: var(--cinza-700);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.folder-label {
+  width: max-content;
+  border-radius: 999px;
+  background: var(--azul-100);
+  color: var(--azul-900) !important;
+  padding: 5px 8px;
+  font-size: 0.76rem !important;
+  text-transform: uppercase;
+}
+
+.folder-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .products-list {
@@ -642,6 +707,12 @@ select:focus {
   justify-self: start;
 }
 
+.row-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .row-error {
   margin: 0;
   color: var(--vermelho);
@@ -708,10 +779,6 @@ input[aria-invalid="true"] {
   .search-field {
     grid-column: 1 / -1;
   }
-
-  .subcategory-search-field {
-    grid-column: 1 / -1;
-  }
 }
 
 @media (max-width: 640px) {
@@ -737,6 +804,12 @@ input[aria-invalid="true"] {
   }
 
   .product-form-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .folder-heading,
+  .row-tools {
     align-items: stretch;
     flex-direction: column;
   }

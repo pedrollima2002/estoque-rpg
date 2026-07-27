@@ -25,10 +25,10 @@ const estado = {
   salvandoFormulario: false,
   salvandoProdutos: new Set(),
   proximoFormularioId: 1,
+  categoriaSelecionada: null,
   filtros: {
+    buscaCategoria: '',
     busca: '',
-    buscaSubcategoria: '',
-    categoria: 'Todos',
     subcategoria: 'Todos',
     cor: 'Todos',
     tamanho: 'Todos',
@@ -56,9 +56,14 @@ const elementos = {
   historicoSection: document.querySelector('#historico-section'),
   novoProdutoBtn: document.querySelector('#novo-produto-btn'),
   atualizarHistoricoBtn: document.querySelector('#atualizar-historico-btn'),
+  categoriasView: document.querySelector('#categorias-view'),
+  produtosView: document.querySelector('#produtos-view'),
+  buscaCategoria: document.querySelector('#busca-categoria'),
+  categoriasLista: document.querySelector('#categorias-lista'),
+  categoriasVazio: document.querySelector('#categorias-vazio'),
+  voltarCategoriasBtn: document.querySelector('#voltar-categorias-btn'),
+  categoriaAtualTitulo: document.querySelector('#categoria-atual-titulo'),
   busca: document.querySelector('#busca'),
-  buscaSubcategoria: document.querySelector('#busca-subcategoria'),
-  filtroCategoria: document.querySelector('#filtro-categoria'),
   filtroSubcategoria: document.querySelector('#filtro-subcategoria'),
   filtroCor: document.querySelector('#filtro-cor'),
   filtroTamanho: document.querySelector('#filtro-tamanho'),
@@ -75,6 +80,7 @@ const elementos = {
   produtoId: document.querySelector('#produto-id'),
   produtosFormLista: document.querySelector('#produtos-form-lista'),
   adicionarProdutoLinhaBtn: document.querySelector('#adicionar-produto-linha-btn'),
+  copiarProdutoLinhaBtn: document.querySelector('#copiar-produto-linha-btn'),
   salvarProdutoBtn: document.querySelector('#salvar-produto-btn'),
   cancelarProdutoBtn: document.querySelector('#cancelar-produto-btn'),
   fecharModalBtn: document.querySelector('#fechar-modal-btn')
@@ -114,8 +120,11 @@ function configurarEventos() {
   elementos.cancelarProdutoBtn.addEventListener('click', fecharFormularioProduto);
   elementos.fecharModalBtn.addEventListener('click', fecharFormularioProduto);
   elementos.atualizarHistoricoBtn.addEventListener('click', carregarHistorico);
+  elementos.categoriasLista.addEventListener('click', aoClicarCategoria);
+  elementos.voltarCategoriasBtn.addEventListener('click', voltarParaCategorias);
   elementos.produtosLista.addEventListener('click', aoClicarProduto);
   elementos.adicionarProdutoLinhaBtn.addEventListener('click', () => adicionarLinhaProduto());
+  elementos.copiarProdutoLinhaBtn.addEventListener('click', copiarProdutoAnterior);
   elementos.produtosFormLista.addEventListener('click', aoClicarFormularioProdutos);
   elementos.produtosFormLista.addEventListener('focusin', aoFocarFormularioProdutos);
   elementos.produtosFormLista.addEventListener('input', aoDigitarFormularioProdutos);
@@ -128,18 +137,17 @@ function configurarEventos() {
     }
   });
 
+  elementos.buscaCategoria.addEventListener('input', () => {
+    estado.filtros.buscaCategoria = elementos.buscaCategoria.value;
+    renderizarCategorias();
+  });
+
   elementos.busca.addEventListener('input', () => {
     estado.filtros.busca = elementos.busca.value;
     renderizarProdutos();
   });
 
-  elementos.buscaSubcategoria.addEventListener('input', () => {
-    estado.filtros.buscaSubcategoria = elementos.buscaSubcategoria.value;
-    renderizarProdutos();
-  });
-
   [
-    [elementos.filtroCategoria, 'categoria'],
     [elementos.filtroSubcategoria, 'subcategoria'],
     [elementos.filtroCor, 'cor'],
     [elementos.filtroTamanho, 'tamanho'],
@@ -224,10 +232,10 @@ async function carregarProdutos() {
   try {
     estado.produtos = await listarProdutos();
     estado.produtos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    atualizarFiltros();
+    garantirCategoriaSelecionada();
     atualizarSugestoesFormulario();
     renderizarResumo();
-    renderizarProdutos();
+    renderizarEstoque();
   } catch (erro) {
     mostrarMensagem(traduzirErro(erro), 'error');
   }
@@ -248,17 +256,50 @@ function renderizarResumo() {
   elementos.totalModelos.textContent = estado.produtos.length;
 }
 
+function garantirCategoriaSelecionada() {
+  if (!estado.categoriaSelecionada) {
+    return;
+  }
+
+  const categoriaAindaExiste = valoresUnicos('categoria').includes(estado.categoriaSelecionada);
+
+  if (!categoriaAindaExiste) {
+    estado.categoriaSelecionada = null;
+    resetarFiltrosProdutos();
+  }
+}
+
+function renderizarEstoque() {
+  const pastaAberta = Boolean(estado.categoriaSelecionada);
+
+  elementos.categoriasView.hidden = pastaAberta;
+  elementos.produtosView.hidden = !pastaAberta;
+
+  if (pastaAberta) {
+    elementos.categoriaAtualTitulo.textContent = estado.categoriaSelecionada;
+    atualizarFiltros();
+    renderizarProdutos();
+  } else {
+    renderizarCategorias();
+  }
+}
+
 function atualizarFiltros() {
-  estado.filtros.categoria = preencherFiltro(elementos.filtroCategoria, valoresUnicos('categoria'), estado.filtros.categoria);
-  estado.filtros.subcategoria = preencherFiltro(elementos.filtroSubcategoria, valoresUnicos('subcategoria'), estado.filtros.subcategoria);
-  estado.filtros.cor = preencherFiltro(elementos.filtroCor, valoresUnicos('cor'), estado.filtros.cor);
-  estado.filtros.tamanho = preencherFiltro(elementos.filtroTamanho, valoresUnicos('tamanho'), estado.filtros.tamanho);
+  const produtosDaCategoria = obterProdutosDaCategoriaSelecionada();
+
+  estado.filtros.subcategoria = preencherFiltro(elementos.filtroSubcategoria, valoresUnicosEmProdutos(produtosDaCategoria, 'subcategoria'), estado.filtros.subcategoria);
+  estado.filtros.cor = preencherFiltro(elementos.filtroCor, valoresUnicosEmProdutos(produtosDaCategoria, 'cor'), estado.filtros.cor);
+  estado.filtros.tamanho = preencherFiltro(elementos.filtroTamanho, valoresUnicosEmProdutos(produtosDaCategoria, 'tamanho'), estado.filtros.tamanho);
   elementos.filtroEstoque.value = estado.filtros.estoque;
 }
 
 function valoresUnicos(campo) {
+  return valoresUnicosEmProdutos(estado.produtos, campo);
+}
+
+function valoresUnicosEmProdutos(produtos, campo) {
   return [...new Set(
-    estado.produtos
+    produtos
       .map((produto) => produto[campo]?.trim())
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -278,6 +319,87 @@ function preencherFiltro(select, opcoes, valorAtual) {
   return valorSelecionado;
 }
 
+function renderizarCategorias() {
+  const termo = normalizarBusca(estado.filtros.buscaCategoria);
+  const categorias = obterResumoCategorias()
+    .filter((categoria) => normalizarBusca(categoria.nome).includes(termo));
+
+  elementos.categoriasVazio.hidden = categorias.length > 0;
+  elementos.categoriasLista.innerHTML = categorias.map(montarCartaoCategoria).join('');
+}
+
+function obterResumoCategorias() {
+  const categorias = new Map();
+
+  estado.produtos.forEach((produto) => {
+    const nomeCategoria = produto.categoria || 'Sem categoria';
+    const resumo = categorias.get(nomeCategoria) ?? {
+      nome: nomeCategoria,
+      modelos: 0,
+      pecas: 0,
+      zerados: 0
+    };
+
+    resumo.modelos += 1;
+    resumo.pecas += Number(produto.quantidade);
+    resumo.zerados += Number(produto.quantidade) === 0 ? 1 : 0;
+    categorias.set(nomeCategoria, resumo);
+  });
+
+  return [...categorias.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+function montarCartaoCategoria(categoria) {
+  const textoPecas = categoria.pecas === 1 ? 'peça' : 'peças';
+  const textoModelos = categoria.modelos === 1 ? 'modelo' : 'modelos';
+  let html = '';
+
+  html += '<button class="category-card" type="button" data-category="' + escaparAtributo(categoria.nome) + '">';
+  html += '<span class="folder-label">Pasta</span>';
+  html += '<strong>' + escaparHtml(categoria.nome) + '</strong>';
+  html += '<span>' + categoria.pecas + ' ' + textoPecas + ' em ' + categoria.modelos + ' ' + textoModelos + '</span>';
+  html += categoria.zerados > 0 ? '<small>' + categoria.zerados + ' sem estoque</small>' : '';
+  html += '</button>';
+
+  return html;
+}
+
+function aoClicarCategoria(evento) {
+  const categoriaCard = evento.target.closest('[data-category]');
+
+  if (!categoriaCard) {
+    return;
+  }
+
+  estado.categoriaSelecionada = categoriaCard.dataset.category;
+  resetarFiltrosProdutos();
+  renderizarEstoque();
+}
+
+function voltarParaCategorias() {
+  estado.categoriaSelecionada = null;
+  resetarFiltrosProdutos();
+  renderizarEstoque();
+}
+
+function resetarFiltrosProdutos() {
+  estado.filtros.busca = '';
+  estado.filtros.subcategoria = 'Todos';
+  estado.filtros.cor = 'Todos';
+  estado.filtros.tamanho = 'Todos';
+  estado.filtros.estoque = 'todos';
+
+  elementos.busca.value = '';
+}
+
+function obterProdutosDaCategoriaSelecionada() {
+  if (!estado.categoriaSelecionada) {
+    return estado.produtos;
+  }
+
+  return estado.produtos.filter((produto) => produto.categoria === estado.categoriaSelecionada);
+}
+
 function renderizarProdutos() {
   const produtosFiltrados = filtrarProdutos();
   elementos.produtosVazio.hidden = produtosFiltrados.length > 0;
@@ -286,18 +408,15 @@ function renderizarProdutos() {
 
 function filtrarProdutos() {
   const termo = normalizarBusca(estado.filtros.busca);
-  const termoSubcategoria = normalizarBusca(estado.filtros.buscaSubcategoria);
 
-  return estado.produtos.filter((produto) => {
+  return obterProdutosDaCategoriaSelecionada().filter((produto) => {
     const nomeCombina = normalizarBusca(produto.nome).includes(termo);
-    const categoriaCombina = estado.filtros.categoria === 'Todos' || produto.categoria === estado.filtros.categoria;
     const subcategoriaCombina = estado.filtros.subcategoria === 'Todos' || produto.subcategoria === estado.filtros.subcategoria;
-    const buscaSubcategoriaCombina = normalizarBusca(produto.subcategoria).includes(termoSubcategoria);
     const corCombina = estado.filtros.cor === 'Todos' || produto.cor === estado.filtros.cor;
     const tamanhoCombina = estado.filtros.tamanho === 'Todos' || produto.tamanho === estado.filtros.tamanho;
     const estoqueCombina = filtrarPorEstoque(produto);
 
-    return nomeCombina && categoriaCombina && subcategoriaCombina && buscaSubcategoriaCombina && corCombina && tamanhoCombina && estoqueCombina;
+    return nomeCombina && subcategoriaCombina && corCombina && tamanhoCombina && estoqueCombina;
   });
 }
 
@@ -571,11 +690,25 @@ function atualizarBotaoAdicionarLinha() {
 
   elementos.adicionarProdutoLinhaBtn.hidden = Boolean(estado.produtoEditando);
   elementos.adicionarProdutoLinhaBtn.disabled = estado.salvandoFormulario || chegouNoLimite;
-  elementos.adicionarProdutoLinhaBtn.textContent = chegouNoLimite ? 'Limite de 10 produtos' : '+ Adicionar outro produto';
+  elementos.adicionarProdutoLinhaBtn.textContent = chegouNoLimite ? 'Limite de 10 produtos' : '+ Produto vazio';
+
+  elementos.copiarProdutoLinhaBtn.hidden = Boolean(estado.produtoEditando);
+  elementos.copiarProdutoLinhaBtn.disabled = estado.salvandoFormulario || chegouNoLimite || totalLinhas === 0;
 }
 
 function obterLinhasProdutoFormulario() {
   return Array.from(elementos.produtosFormLista.querySelectorAll('[data-product-row]'));
+}
+
+function copiarProdutoAnterior() {
+  const linhas = obterLinhasProdutoFormulario();
+  const ultimaLinha = linhas[linhas.length - 1];
+
+  if (!ultimaLinha) {
+    return;
+  }
+
+  adicionarLinhaProduto(lerDadosLinha(ultimaLinha));
 }
 
 function aoClicarFormularioProdutos(evento) {
