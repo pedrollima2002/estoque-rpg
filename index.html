@@ -65,13 +65,70 @@
         </div>
 
         <section id="categorias-view" class="category-view">
-          <label class="category-search-field" for="busca-categoria">
-            <span>Pesquisar categoria</span>
-            <input id="busca-categoria" type="search" placeholder="Nome da categoria" autocomplete="off">
-          </label>
+          <div class="global-filter-panel">
+            <div class="section-heading">
+              <h2>Pesquisar no estoque inteiro</h2>
+              <button id="limpar-filtros-gerais-btn" class="ghost-button" type="button" hidden>Limpar filtros</button>
+            </div>
 
-          <div id="categorias-lista" class="category-list" aria-live="polite"></div>
-          <p id="categorias-vazio" class="empty-state" hidden>Nenhuma categoria encontrada.</p>
+            <div class="filters global-filters">
+              <label class="search-field" for="busca-geral">
+                <span>Pesquisar produto</span>
+                <input id="busca-geral" type="search" placeholder="Nome do produto" autocomplete="off">
+              </label>
+
+              <label for="filtro-geral-categoria">
+                <span>Categoria</span>
+                <select id="filtro-geral-categoria"></select>
+              </label>
+
+              <label for="filtro-geral-subcategoria">
+                <span>Subcategoria</span>
+                <select id="filtro-geral-subcategoria"></select>
+              </label>
+
+              <label for="filtro-geral-cor">
+                <span>Cor</span>
+                <select id="filtro-geral-cor"></select>
+              </label>
+
+              <label for="filtro-geral-tamanho">
+                <span>Tamanho</span>
+                <select id="filtro-geral-tamanho"></select>
+              </label>
+
+              <label for="filtro-geral-estoque">
+                <span>Estoque</span>
+                <select id="filtro-geral-estoque">
+                  <option value="todos">Todos</option>
+                  <option value="baixo">Estoque baixo</option>
+                  <option value="zerado">Sem estoque</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div id="categorias-conteudo" class="category-content">
+            <label class="category-search-field" for="busca-categoria">
+              <span>Pesquisar categoria</span>
+              <input id="busca-categoria" type="search" placeholder="Nome da categoria" autocomplete="off">
+            </label>
+
+            <div id="categorias-lista" class="category-list" aria-live="polite"></div>
+            <p id="categorias-vazio" class="empty-state" hidden>Nenhuma categoria encontrada.</p>
+          </div>
+
+          <section id="resultado-geral-view" class="products-view" hidden>
+            <div class="folder-heading">
+              <div>
+                <p class="brand-kicker">Resultado geral</p>
+                <h2 id="resultado-geral-titulo">Produtos encontrados</h2>
+              </div>
+            </div>
+
+            <div id="produtos-gerais-lista" class="products-list" aria-live="polite"></div>
+            <p id="produtos-gerais-vazio" class="empty-state" hidden>Nenhum produto encontrado.</p>
+          </section>
         </section>
 
         <section id="produtos-view" class="products-view" hidden>

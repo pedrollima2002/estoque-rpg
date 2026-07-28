@@ -290,6 +290,24 @@ select:focus {
   font-size: 0.82rem;
 }
 
+.global-filter-panel,
+.category-content {
+  display: grid;
+  gap: 14px;
+}
+
+.global-filter-panel {
+  padding: 14px;
+  background: var(--branco);
+  border: 1px solid var(--cinza-200);
+  border-radius: var(--raio);
+  box-shadow: 0 8px 20px rgba(15, 39, 66, 0.06);
+}
+
+.global-filters {
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+}
+
 .category-view,
 .products-view {
   display: grid;

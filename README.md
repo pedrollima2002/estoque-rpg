@@ -14,6 +14,7 @@ Criei este projeto para facilitar o controle de estoque da minha loja, a RPG Mul
 - Aumento e diminuição rápida da quantidade em estoque.
 - Confirmação antes de zerar um produto.
 - Tela inicial organizada por pastas de categoria.
+- Filtros gerais na tela inicial para pesquisar produtos em todas as categorias.
 - Busca por categoria na tela inicial.
 - Busca por nome dentro da categoria.
 - Filtros por subcategoria, cor, tamanho e situação do estoque.

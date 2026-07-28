@@ -26,6 +26,14 @@ const estado = {
   salvandoProdutos: new Set(),
   proximoFormularioId: 1,
   categoriaSelecionada: null,
+  filtrosGerais: {
+    busca: '',
+    categoria: 'Todos',
+    subcategoria: 'Todos',
+    cor: 'Todos',
+    tamanho: 'Todos',
+    estoque: 'todos'
+  },
   filtros: {
     buscaCategoria: '',
     busca: '',
@@ -58,6 +66,18 @@ const elementos = {
   atualizarHistoricoBtn: document.querySelector('#atualizar-historico-btn'),
   categoriasView: document.querySelector('#categorias-view'),
   produtosView: document.querySelector('#produtos-view'),
+  buscaGeral: document.querySelector('#busca-geral'),
+  filtroGeralCategoria: document.querySelector('#filtro-geral-categoria'),
+  filtroGeralSubcategoria: document.querySelector('#filtro-geral-subcategoria'),
+  filtroGeralCor: document.querySelector('#filtro-geral-cor'),
+  filtroGeralTamanho: document.querySelector('#filtro-geral-tamanho'),
+  filtroGeralEstoque: document.querySelector('#filtro-geral-estoque'),
+  limparFiltrosGeraisBtn: document.querySelector('#limpar-filtros-gerais-btn'),
+  categoriasConteudo: document.querySelector('#categorias-conteudo'),
+  resultadoGeralView: document.querySelector('#resultado-geral-view'),
+  resultadoGeralTitulo: document.querySelector('#resultado-geral-titulo'),
+  produtosGeraisLista: document.querySelector('#produtos-gerais-lista'),
+  produtosGeraisVazio: document.querySelector('#produtos-gerais-vazio'),
   buscaCategoria: document.querySelector('#busca-categoria'),
   categoriasLista: document.querySelector('#categorias-lista'),
   categoriasVazio: document.querySelector('#categorias-vazio'),
@@ -123,6 +143,7 @@ function configurarEventos() {
   elementos.categoriasLista.addEventListener('click', aoClicarCategoria);
   elementos.voltarCategoriasBtn.addEventListener('click', voltarParaCategorias);
   elementos.produtosLista.addEventListener('click', aoClicarProduto);
+  elementos.produtosGeraisLista.addEventListener('click', aoClicarProduto);
   elementos.adicionarProdutoLinhaBtn.addEventListener('click', () => adicionarLinhaProduto());
   elementos.copiarProdutoLinhaBtn.addEventListener('click', copiarProdutoAnterior);
   elementos.produtosFormLista.addEventListener('click', aoClicarFormularioProdutos);
@@ -141,6 +162,26 @@ function configurarEventos() {
     estado.filtros.buscaCategoria = elementos.buscaCategoria.value;
     renderizarCategorias();
   });
+
+  elementos.buscaGeral.addEventListener('input', () => {
+    estado.filtrosGerais.busca = elementos.buscaGeral.value;
+    renderizarCategorias();
+  });
+
+  [
+    [elementos.filtroGeralCategoria, 'categoria'],
+    [elementos.filtroGeralSubcategoria, 'subcategoria'],
+    [elementos.filtroGeralCor, 'cor'],
+    [elementos.filtroGeralTamanho, 'tamanho'],
+    [elementos.filtroGeralEstoque, 'estoque']
+  ].forEach(([elemento, chave]) => {
+    elemento.addEventListener('change', () => {
+      estado.filtrosGerais[chave] = elemento.value;
+      renderizarCategorias();
+    });
+  });
+
+  elementos.limparFiltrosGeraisBtn.addEventListener('click', limparFiltrosGerais);
 
   elementos.busca.addEventListener('input', () => {
     estado.filtros.busca = elementos.busca.value;
@@ -233,6 +274,7 @@ async function carregarProdutos() {
     estado.produtos = await listarProdutos();
     estado.produtos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     garantirCategoriaSelecionada();
+    atualizarFiltrosGerais();
     atualizarSugestoesFormulario();
     renderizarResumo();
     renderizarEstoque();
@@ -284,6 +326,14 @@ function renderizarEstoque() {
   }
 }
 
+function atualizarFiltrosGerais() {
+  estado.filtrosGerais.categoria = preencherFiltro(elementos.filtroGeralCategoria, valoresUnicos('categoria'), estado.filtrosGerais.categoria);
+  estado.filtrosGerais.subcategoria = preencherFiltro(elementos.filtroGeralSubcategoria, valoresUnicos('subcategoria'), estado.filtrosGerais.subcategoria);
+  estado.filtrosGerais.cor = preencherFiltro(elementos.filtroGeralCor, valoresUnicos('cor'), estado.filtrosGerais.cor);
+  estado.filtrosGerais.tamanho = preencherFiltro(elementos.filtroGeralTamanho, valoresUnicos('tamanho'), estado.filtrosGerais.tamanho);
+  elementos.filtroGeralEstoque.value = estado.filtrosGerais.estoque;
+}
+
 function atualizarFiltros() {
   const produtosDaCategoria = obterProdutosDaCategoriaSelecionada();
 
@@ -320,12 +370,87 @@ function preencherFiltro(select, opcoes, valorAtual) {
 }
 
 function renderizarCategorias() {
+  const filtrosGeraisAtivos = filtrosGeraisEstaoAtivos();
+
+  elementos.categoriasConteudo.hidden = filtrosGeraisAtivos;
+  elementos.resultadoGeralView.hidden = !filtrosGeraisAtivos;
+  elementos.limparFiltrosGeraisBtn.hidden = !filtrosGeraisAtivos;
+
+  if (filtrosGeraisAtivos) {
+    renderizarProdutosGerais();
+    return;
+  }
+
   const termo = normalizarBusca(estado.filtros.buscaCategoria);
   const categorias = obterResumoCategorias()
     .filter((categoria) => normalizarBusca(categoria.nome).includes(termo));
 
   elementos.categoriasVazio.hidden = categorias.length > 0;
   elementos.categoriasLista.innerHTML = categorias.map(montarCartaoCategoria).join('');
+}
+
+function renderizarProdutosGerais() {
+  const produtosFiltrados = filtrarProdutosGerais();
+  const total = produtosFiltrados.length;
+
+  elementos.resultadoGeralTitulo.textContent = total === 1
+    ? '1 produto encontrado'
+    : total + ' produtos encontrados';
+  elementos.produtosGeraisVazio.hidden = total > 0;
+  elementos.produtosGeraisLista.innerHTML = produtosFiltrados.map(montarCartaoProduto).join('');
+}
+
+function filtrosGeraisEstaoAtivos() {
+  return normalizarBusca(estado.filtrosGerais.busca) !== ''
+    || estado.filtrosGerais.categoria !== 'Todos'
+    || estado.filtrosGerais.subcategoria !== 'Todos'
+    || estado.filtrosGerais.cor !== 'Todos'
+    || estado.filtrosGerais.tamanho !== 'Todos'
+    || estado.filtrosGerais.estoque !== 'todos';
+}
+
+function filtrarProdutosGerais() {
+  const termo = normalizarBusca(estado.filtrosGerais.busca);
+
+  return estado.produtos.filter((produto) => {
+    const nomeCombina = normalizarBusca(produto.nome).includes(termo);
+    const categoriaCombina = estado.filtrosGerais.categoria === 'Todos' || produto.categoria === estado.filtrosGerais.categoria;
+    const subcategoriaCombina = estado.filtrosGerais.subcategoria === 'Todos' || produto.subcategoria === estado.filtrosGerais.subcategoria;
+    const corCombina = estado.filtrosGerais.cor === 'Todos' || produto.cor === estado.filtrosGerais.cor;
+    const tamanhoCombina = estado.filtrosGerais.tamanho === 'Todos' || produto.tamanho === estado.filtrosGerais.tamanho;
+    const estoqueCombina = filtrarPorEstoqueGeral(produto);
+
+    return nomeCombina && categoriaCombina && subcategoriaCombina && corCombina && tamanhoCombina && estoqueCombina;
+  });
+}
+
+function filtrarPorEstoqueGeral(produto) {
+  const quantidade = Number(produto.quantidade);
+
+  if (estado.filtrosGerais.estoque === 'baixo') {
+    return quantidade >= 1 && quantidade <= 3;
+  }
+
+  if (estado.filtrosGerais.estoque === 'zerado') {
+    return quantidade === 0;
+  }
+
+  return true;
+}
+
+function limparFiltrosGerais() {
+  estado.filtrosGerais = {
+    busca: '',
+    categoria: 'Todos',
+    subcategoria: 'Todos',
+    cor: 'Todos',
+    tamanho: 'Todos',
+    estoque: 'todos'
+  };
+
+  elementos.buscaGeral.value = '';
+  atualizarFiltrosGerais();
+  renderizarCategorias();
 }
 
 function obterResumoCategorias() {
@@ -537,14 +662,14 @@ async function alterarQuantidade(produto, delta) {
 
   try {
     estado.salvandoProdutos.add(produto.id);
-    renderizarProdutos();
+    renderizarEstoque();
     await ajustarQuantidade(produto, delta, estado.usuario);
     await carregarProdutos();
   } catch (erro) {
     mostrarMensagem(traduzirErro(erro), 'error');
   } finally {
     estado.salvandoProdutos.delete(produto.id);
-    renderizarProdutos();
+    renderizarEstoque();
   }
 }
 
@@ -1053,7 +1178,7 @@ async function confirmarExclusao(produto) {
 
   try {
     estado.salvandoProdutos.add(produto.id);
-    renderizarProdutos();
+    renderizarEstoque();
     await excluirProduto(produto, estado.usuario);
     mostrarMensagem('Produto excluído com sucesso.', 'success');
     await carregarProdutos();
@@ -1062,7 +1187,7 @@ async function confirmarExclusao(produto) {
     mostrarMensagem(traduzirErro(erro), 'error');
   } finally {
     estado.salvandoProdutos.delete(produto.id);
-    renderizarProdutos();
+    renderizarEstoque();
   }
 }
 
