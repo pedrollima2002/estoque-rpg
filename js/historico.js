@@ -1,6 +1,26 @@
 import { supabase } from './supabase-config.js';
+import { escaparFiltroPostgrest, inicioDoMesIso } from './utils.js';
 
-const CAMPOS_HISTORICO = [
+const CAMPOS_COMPLETOS = [
+  'id',
+  'produto_id',
+  'produto_nome',
+  'produto_categoria',
+  'produto_subcategoria',
+  'produto_cor',
+  'produto_tamanho',
+  'quantidade_anterior',
+  'quantidade_nova',
+  'diferenca',
+  'tipo',
+  'motivo',
+  'usuario_id',
+  'usuario_email',
+  'usuario_nome',
+  'created_at'
+].join(',');
+
+const CAMPOS_ANTIGOS = [
   'id',
   'produto_id',
   'produto_nome',
@@ -12,72 +32,85 @@ const CAMPOS_HISTORICO = [
   'created_at'
 ].join(',');
 
-function normalizarTextoProduto(valor) {
-  return String(valor ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+function normalizarMovimentacao(item) {
+  return {
+    ...item,
+    diferenca: Number(item.diferenca ?? Number(item.quantidade_nova) - Number(item.quantidade_anterior)),
+    motivo: item.motivo ?? '',
+    usuario_nome: item.usuario_nome ?? '',
+    produto_categoria: item.produto_categoria ?? '',
+    produto_subcategoria: item.produto_subcategoria ?? '',
+    produto_cor: item.produto_cor ?? '',
+    produto_tamanho: item.produto_tamanho ?? ''
+  };
 }
 
-export async function listarMovimentacoes(limite = 50) {
+function aplicarFiltros(query, filtros) {
+  if (filtros.inicio) query = query.gte('created_at', filtros.inicio);
+  if (filtros.fim) query = query.lte('created_at', filtros.fim);
+  if (filtros.produto) query = query.ilike('produto_nome', `%${filtros.produto.trim()}%`);
+  if (filtros.categoria) query = query.eq('produto_categoria', filtros.categoria);
+  if (filtros.usuario) query = query.ilike('usuario_email', `%${filtros.usuario.trim()}%`);
+  if (filtros.tipo) query = query.eq('tipo', filtros.tipo);
+
+  const busca = escaparFiltroPostgrest(filtros.busca);
+  if (busca) {
+    query = query.or(`produto_nome.ilike.%${busca}%,motivo.ilike.%${busca}%,produto_cor.ilike.%${busca}%,produto_tamanho.ilike.%${busca}%`);
+  }
+
+  return query;
+}
+
+export async function listarMovimentacoes({ pagina = 0, limite = 30, filtros = {} } = {}) {
+  const inicio = pagina * limite;
+  const fim = inicio + limite - 1;
+  let query = supabase
+    .from('movimentacoes')
+    .select(CAMPOS_COMPLETOS, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(inicio, fim);
+
+  query = aplicarFiltros(query, filtros);
+  let resposta = await query;
+
+  if (resposta.error && /produto_categoria|diferenca|motivo|usuario_nome/.test(resposta.error.message ?? '')) {
+    resposta = await supabase
+      .from('movimentacoes')
+      .select(CAMPOS_ANTIGOS, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(inicio, fim);
+  }
+
+  if (resposta.error) throw resposta.error;
+
+  return {
+    itens: (resposta.data ?? []).map(normalizarMovimentacao),
+    total: resposta.count ?? 0
+  };
+}
+
+export async function obterResumoMovimentacoesMes() {
   const { data, error } = await supabase
     .from('movimentacoes')
-    .select(CAMPOS_HISTORICO)
-    .order('created_at', { ascending: false })
-    .limit(limite);
+    .select('diferenca,tipo,created_at')
+    .gte('created_at', inicioDoMesIso())
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 
-  return data ?? [];
-}
-
-// Cada alteração importante do estoque passa por esta função para alimentar a tela Histórico.
-export async function registrarMovimentacao({
-  produtoId,
-  produtoNome,
-  quantidadeAnterior,
-  quantidadeNova,
-  tipo,
-  usuario
-}) {
-  await registrarMovimentacoes([{
-    produtoId,
-    produtoNome,
-    quantidadeAnterior,
-    quantidadeNova,
-    tipo,
-    usuario
-  }]);
-}
-
-export async function registrarMovimentacoes(movimentacoes) {
-  const { error } = await supabase
-    .from('movimentacoes')
-    .insert(movimentacoes.map((movimentacao) => ({
-      produto_id: movimentacao.produtoId,
-      produto_nome: normalizarTextoProduto(movimentacao.produtoNome),
-      quantidade_anterior: movimentacao.quantidadeAnterior,
-      quantidade_nova: movimentacao.quantidadeNova,
-      tipo: movimentacao.tipo,
-      usuario_id: movimentacao.usuario?.id ?? null,
-      usuario_email: movimentacao.usuario?.email ?? ''
-    })));
-
-  if (error) {
-    throw error;
-  }
+  return (data ?? []).reduce((resumo, item) => {
+    const diferenca = Number(item.diferenca ?? 0);
+    if (diferenca > 0) resumo.entradas += diferenca;
+    if (diferenca < 0) resumo.saidas += Math.abs(diferenca);
+    return resumo;
+  }, { entradas: 0, saidas: 0 });
 }
 
 export function observarMovimentacoes(callback) {
   const canal = supabase
     .channel('movimentacoes-rpg')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'movimentacoes' },
-      callback
-    )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes' }, callback)
     .subscribe();
 
-  return () => {
-    supabase.removeChannel(canal);
-  };
+  return () => supabase.removeChannel(canal);
 }

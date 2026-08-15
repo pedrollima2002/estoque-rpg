@@ -1,361 +1,251 @@
-# RPG Multimarcas — Controle de Estoque
+# RPG Multimarcas - Controle de Estoque
 
-Criei este projeto para facilitar o controle de estoque da minha loja, a RPG Multimarcas. Antes, a quantidade dos produtos era controlada de forma manual. Com o sistema, eu e meus sócios conseguimos acessar o mesmo estoque, aumentar ou diminuir quantidades e acompanhar o histórico das alterações.
+Sistema web de estoque compartilhado da RPG Multimarcas. A aplicação foi desenhada para a rotina de uma loja de roupas: cadastro rápido de cores e tamanhos, movimentação segura, histórico auditável, conferência física e uso confortável no celular ou computador.
+
+## Tecnologias
+
+- HTML5 e CSS3 responsivo.
+- JavaScript com módulos nativos, sem framework pesado.
+- Supabase Auth para login por e-mail e senha.
+- PostgreSQL/Supabase Database para produtos, movimentações e conferências.
+- Supabase RPC para operações transacionais de estoque.
+- Row Level Security para restringir o acesso a usuários autenticados.
+- Supabase Realtime para sincronização entre os usuários.
+- GitHub Pages para hospedagem do frontend.
 
 ## Funcionalidades
 
-- Login com e-mail e senha.
-- Acesso restrito a usuários cadastrados.
-- Cadastro de novos produtos.
-- Cadastro de até 10 produtos de uma só vez.
-- Cópia do produto anterior para cadastrar variações mais rápido.
-- Edição e exclusão de produtos.
-- Padronização dos textos dos produtos em letras maiúsculas antes de salvar.
-- Aumento e diminuição rápida da quantidade em estoque.
-- Confirmação antes de zerar um produto.
-- Tela inicial organizada por pastas de categoria.
-- Filtros gerais na tela inicial para pesquisar produtos em todas as categorias.
-- Busca por categoria na tela inicial.
-- Busca por nome dentro da categoria.
-- Filtros por subcategoria, cor, tamanho e situação do estoque.
-- Indicadores com total de peças e modelos cadastrados.
-- Avisos de estoque baixo e produto sem estoque.
-- Histórico de movimentações.
-- Atualização em tempo real entre os usuários.
-- Layout responsivo para computador, tablet e celular.
+- Login restrito a usuários cadastrados no Supabase.
+- Dashboard com total de peças, variações, estoque baixo, zerados, valor do estoque, entradas e saídas do mês.
+- Produtos organizados automaticamente por categorias.
+- Pesquisa e filtros gerais em todas as categorias.
+- Filtros dentro de cada categoria.
+- Visualização individual ou agrupada por modelo.
+- Cadastro por matriz de cores e tamanhos.
+- Cadastro por linhas mantido como alternativa, com cópia da linha anterior.
+- Sugestões baseadas nos dados já existentes para categoria, subcategoria, cor e tamanho.
+- Detecção de variações duplicadas, ignorando diferenças de caixa e espaços extras.
+- Opção de somar a quantidade ao registro existente.
+- Botões rápidos `+1` e `-1`.
+- Modal para entrada, venda, devolução, troca, perda/avaria e ajuste manual.
+- Bloqueio de estoque negativo.
+- Histórico paginado com filtros por período, produto, categoria, usuário e tipo.
+- Arquivamento e restauração de produtos sem apagar o histórico.
+- Exclusão permanente somente para produtos arquivados e com confirmação forte.
+- Conferência física com progresso salvo, busca, navegação, resumo de divergências e aplicação confirmada.
+- Realtime para atualização entre os sócios.
+- Navegação lateral no desktop e barra inferior no celular.
 
-## Tecnologias utilizadas
+## Cadastro Por Variações
 
-- HTML5
-- CSS3
-- JavaScript
-- Supabase Auth
-- Supabase Database
-- Supabase Realtime
-- GitHub Pages
+1. Preencha uma vez nome, categoria, subcategoria, descrição, valor e estoque mínimo.
+2. Adicione todas as cores disponíveis.
+3. Adicione todos os tamanhos disponíveis.
+4. Informe as quantidades na matriz gerada automaticamente.
+5. Confirme o cadastro.
 
-## Estrutura do projeto
+Combinações com quantidade zero não são cadastradas. Isso evita criar registros sem necessidade. Se uma combinação já existir, o sistema mostra o estoque atual e a quantidade nova, oferecendo a opção de somar ao registro existente.
+
+A chave lógica de uma variação é:
+
+```text
+nome + categoria + subcategoria + cor + tamanho
+```
+
+Esses textos são normalizados em letras maiúsculas e com espaços internos padronizados.
+
+## Movimentação De Estoque
+
+Toda alteração de quantidade passa pela função PostgreSQL `movimentar_estoque`.
+
+A função:
+
+1. valida o usuário autenticado;
+2. bloqueia a linha do produto durante a operação;
+3. calcula a nova quantidade no banco;
+4. impede estoque negativo;
+5. atualiza o produto;
+6. grava o histórico com valor anterior, valor novo, diferença, tipo, motivo e usuário;
+7. confirma tudo em uma única transação.
+
+Os botões `+1` e `-1`, o modal de movimentação, a soma de duplicados e os ajustes de conferência usam essa arquitetura.
+
+## Conferência
+
+Ao iniciar uma conferência, o banco cria uma fotografia das quantidades dos produtos ativos. Cada contagem física é salva individualmente, portanto é possível sair e continuar depois.
+
+Quando todos os itens forem contados, o sistema mostra:
+
+- total conferido;
+- produtos sem diferença;
+- produtos com diferença;
+- quantidade atual, encontrada e diferença de cada divergência.
+
+O estoque não é alterado automaticamente. A correção só ocorre após a confirmação em **Aplicar correções**. Todos os ajustes são transacionais e registrados como `ajuste_conferencia`.
+
+## Arquitetura
 
 ```text
 estoque-rpg/
-├── index.html
-├── css/
-│   └── style.css
-├── js/
-│   ├── app.js
-│   ├── auth.js
-│   ├── produtos.js
-│   ├── historico.js
-│   └── supabase-config.js
-├── README.md
-└── .gitignore
+|-- assets/
+|   `-- README.md
+|-- css/
+|   `-- style.css
+|-- js/
+|   |-- app.js
+|   |-- auth.js
+|   |-- conferencia.js
+|   |-- historico.js
+|   |-- movimentacoes.js
+|   |-- produtos.js
+|   |-- supabase-config.js
+|   `-- utils.js
+|-- sql/
+|   |-- 2026-08-15-evolucao-estoque.sql
+|   |-- adicionar-subcategoria-valor.sql
+|   `-- padronizar-produtos-maiusculas.sql
+|-- index.html
+`-- README.md
 ```
 
-## Como o sistema funciona
+Responsabilidades principais:
 
-1. O usuário entra com e-mail e senha.
-2. O Supabase Auth verifica se o acesso é autorizado.
-3. Depois do login, os produtos são carregados da tabela `produtos`.
-4. Cada alteração gera um registro na tabela `movimentacoes`.
-5. O Supabase Realtime atualiza os dados para os outros usuários conectados.
-6. As regras de Row Level Security impedem o acesso de usuários não autenticados.
+- `app.js`: estado da interface, navegação e coordenação dos fluxos.
+- `produtos.js`: leitura, cadastro, edição e arquivamento de produtos.
+- `movimentacoes.js`: chamada única à RPC de movimentação.
+- `historico.js`: filtros, paginação e leitura das movimentações.
+- `conferencia.js`: criação, salvamento e aplicação da conferência.
+- `auth.js`: sessão, login e logout.
+- `utils.js`: normalização, formatação e segurança de HTML.
 
-## Configuração do Supabase
+## Banco De Dados
 
-### 1. Criar o projeto
+### Atualização obrigatória do banco existente
 
-1. Acesse o Supabase.
-2. Entre na sua conta.
-3. Clique em **New project**.
-4. Escolha a organização.
-5. Defina o nome do projeto.
-6. Crie uma senha segura para o banco.
-7. Escolha a região mais próxima.
-8. Clique em **Create new project**.
-
-### 2. Criar as tabelas e políticas de segurança
-
-No Supabase, abra o **SQL Editor**, crie uma nova consulta e execute:
-
-```sql
-create extension if not exists "pgcrypto";
-
-create table if not exists public.produtos (
-  id uuid primary key default gen_random_uuid(),
-  nome text not null,
-  descricao text default '',
-  subcategoria text default '',
-  categoria text not null,
-  cor text not null,
-  tamanho text default '',
-  quantidade integer not null default 0 check (quantidade >= 0),
-  valor_venda numeric(10, 2) check (valor_venda is null or valor_venda >= 0),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.movimentacoes (
-  id uuid primary key default gen_random_uuid(),
-  produto_id uuid,
-  produto_nome text not null,
-  quantidade_anterior integer not null,
-  quantidade_nova integer not null,
-  tipo text not null check (tipo in ('entrada', 'saída', 'edição', 'exclusão')),
-  usuario_id uuid,
-  usuario_email text default '',
-  created_at timestamptz not null default now()
-);
-
-create index if not exists produtos_nome_idx
-on public.produtos (nome);
-
-create index if not exists produtos_categoria_idx
-on public.produtos (categoria);
-
-create index if not exists produtos_cor_idx
-on public.produtos (cor);
-
-create index if not exists produtos_tamanho_idx
-on public.produtos (tamanho);
-
-create index if not exists movimentacoes_created_at_idx
-on public.movimentacoes (created_at desc);
-
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
-drop trigger if exists produtos_set_updated_at
-on public.produtos;
-
-create trigger produtos_set_updated_at
-before update on public.produtos
-for each row
-execute function public.set_updated_at();
-
-alter table public.produtos enable row level security;
-alter table public.movimentacoes enable row level security;
-
-drop policy if exists
-"Produtos visiveis para usuarios autenticados"
-on public.produtos;
-
-drop policy if exists
-"Produtos criados por usuarios autenticados"
-on public.produtos;
-
-drop policy if exists
-"Produtos editados por usuarios autenticados"
-on public.produtos;
-
-drop policy if exists
-"Produtos excluidos por usuarios autenticados"
-on public.produtos;
-
-create policy
-"Produtos visiveis para usuarios autenticados"
-on public.produtos
-for select
-to authenticated
-using (true);
-
-create policy
-"Produtos criados por usuarios autenticados"
-on public.produtos
-for insert
-to authenticated
-with check (true);
-
-create policy
-"Produtos editados por usuarios autenticados"
-on public.produtos
-for update
-to authenticated
-using (true)
-with check (true);
-
-create policy
-"Produtos excluidos por usuarios autenticados"
-on public.produtos
-for delete
-to authenticated
-using (true);
-
-drop policy if exists
-"Historico visivel para usuarios autenticados"
-on public.movimentacoes;
-
-drop policy if exists
-"Historico criado por usuarios autenticados"
-on public.movimentacoes;
-
-create policy
-"Historico visivel para usuarios autenticados"
-on public.movimentacoes
-for select
-to authenticated
-using (true);
-
-create policy
-"Historico criado por usuarios autenticados"
-on public.movimentacoes
-for insert
-to authenticated
-with check (auth.uid() = usuario_id);
-
-alter table public.produtos replica identity full;
-alter table public.movimentacoes replica identity full;
-
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'produtos'
-  ) then
-    alter publication supabase_realtime
-    add table public.produtos;
-  end if;
-
-  if not exists (
-    select 1
-    from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'movimentacoes'
-  ) then
-    alter publication supabase_realtime
-    add table public.movimentacoes;
-  end if;
-end $$;
-```
-
-### Atualizar banco existente
-
-Se o banco já foi criado antes da inclusão de subcategoria e valor de venda, execute uma vez no **SQL Editor** o arquivo:
+Antes de publicar esta versão, execute no **Supabase > SQL Editor** o arquivo completo:
 
 ```text
-sql/adicionar-subcategoria-valor.sql
+sql/2026-08-15-evolucao-estoque.sql
 ```
 
-Essa atualização não apaga produtos, histórico ou usuários.
+A migration usa `ALTER TABLE`, `CREATE TABLE`, `CREATE INDEX` e `CREATE OR REPLACE FUNCTION`. Ela não apaga produtos, movimentações ou usuários existentes.
 
-### Padronizar produtos antigos em maiúsculas
+Novas colunas em `produtos`:
 
-Para converter produtos e nomes do histórico já cadastrados antes desta regra, use o arquivo:
+- `ativo`
+- `arquivado_em`
+- `estoque_minimo`
+
+Novas colunas em `movimentacoes`:
+
+- `diferenca`
+- `motivo`
+- `usuario_nome`
+- `produto_categoria`
+- `produto_subcategoria`
+- `produto_cor`
+- `produto_tamanho`
+
+Novas tabelas:
+
+- `conferencias`
+- `conferencia_itens`
+
+Novas funções RPC:
+
+- `movimentar_estoque`
+- `cadastrar_variacoes`
+- `editar_produto`
+- `definir_produto_arquivado`
+- `excluir_produto_permanentemente`
+- `iniciar_conferencia`
+- `cancelar_conferencia`
+- `aplicar_ajustes_conferencia`
+
+Principais medidas de segurança:
+
+- leitura permitida apenas para o papel `authenticated`;
+- inserção e exclusão direta de produtos removidas do navegador;
+- alteração direta da coluna `quantidade` removida do navegador;
+- funções RPC liberadas apenas para usuários autenticados;
+- trigger de normalização e prevenção de novas variações duplicadas;
+- movimentação com bloqueio de linha e transação atômica;
+- histórico e conferências protegidos por RLS.
+
+### Conferência depois da migration
+
+O final do arquivo SQL contém consultas opcionais para verificar produtos ativos e tipos do histórico. Também é recomendável abrir o sistema e confirmar:
+
+1. os produtos antigos continuam visíveis;
+2. o histórico antigo continua disponível;
+3. `+1` e `-1` atualizam a quantidade;
+4. a movimentação aparece no histórico com usuário e diferença.
+
+## Identidade Visual
+
+Coloque os arquivos oficiais na pasta `assets`:
 
 ```text
-sql/padronizar-produtos-maiusculas.sql
+assets/logo-rpg.png
+assets/favicon.png
+assets/app-icon.png
 ```
 
-Execute primeiro as consultas de conferência. Se os resultados estiverem corretos, execute os comandos de atualização definitiva.
+Nenhuma logo provisória foi inventada. Sem `logo-rpg.png`, a aplicação mostra o nome textual **RPG Multimarcas**.
 
-### 3. Ativar autenticação
+## Execução Local
 
-1. Abra **Authentication**.
-2. Acesse **Providers**.
-3. Ative o login por e-mail e senha.
-4. Cadastre manualmente os usuários que poderão acessar o sistema.
-5. Não crie uma tela pública de cadastro.
+Como o projeto usa módulos JavaScript, execute-o por um servidor local.
 
-### 4. Configurar URL e chave pública
-
-Abra o arquivo:
-
-```text
-js/supabase-config.js
-```
-
-Substitua os valores de exemplo:
-
-```javascript
-export const SUPABASE_URL =
-  'https://SEU-PROJETO.supabase.co';
-
-export const SUPABASE_ANON_KEY =
-  'COLE_AQUI_SUA_CHAVE_ANON_PUBLICA';
-```
-
-Use somente a chave pública `anon`.
-
-Nunca coloque a chave `service_role` no código do navegador.
-
-## Executar localmente
-
-Como o projeto utiliza módulos JavaScript, não abra o arquivo `index.html` diretamente.
-
-### Opção 1 — Live Server
-
-1. Abra o projeto no Visual Studio Code.
-2. Instale a extensão **Live Server**.
-3. Clique com o botão direito em `index.html`.
-4. Selecione **Open with Live Server**.
-
-### Opção 2 — servidor do Python
-
-Dentro da pasta do projeto, execute:
+Com Python:
 
 ```bash
 python -m http.server 5500
 ```
 
-Depois, acesse:
+Depois acesse:
 
 ```text
-http://localhost:5500
+http://127.0.0.1:5500/
 ```
 
-## Publicação no GitHub Pages
+Também é possível usar a extensão Live Server do Visual Studio Code.
 
-1. Envie o projeto para um repositório no GitHub.
-2. Abra **Settings**.
-3. Acesse **Pages**.
-4. Em **Build and deployment**, escolha **Deploy from a branch**.
-5. Selecione a branch `main`.
-6. Selecione a pasta `/root`.
-7. Clique em **Save**.
+## Configuração Do Supabase
 
-Depois da publicação, configure o endereço do GitHub Pages em:
+O frontend usa apenas a chave pública `anon` em `js/supabase-config.js`. Nunca coloque a chave `service_role` no navegador ou no GitHub.
+
+No Supabase Auth, mantenha o cadastro público desativado e crie manualmente apenas os usuários autorizados.
+
+Em **Authentication > URL Configuration**, mantenha as URLs autorizadas:
 
 ```text
-Supabase > Authentication > URL Configuration
-```
-
-Adicione o endereço em **Site URL** e **Redirect URLs**.
-
-Exemplo:
-
-```text
-https://SEU-USUARIO.github.io/estoque-rpg/
+https://pedrollima2002.github.io/estoque-rpg/
 http://localhost:5500
 http://127.0.0.1:5500
 ```
 
-## Segurança
+## Publicação
 
-A chave pública `anon` pode ser utilizada no frontend.
+O projeto está configurado para GitHub Pages pela branch `main`, pasta `/root`:
 
-A proteção dos dados depende das políticas de **Row Level Security** configuradas no Supabase.
+[https://pedrollima2002.github.io/estoque-rpg/](https://pedrollima2002.github.io/estoque-rpg/)
 
-A chave `service_role` é privada e nunca deve ser publicada no GitHub ou utilizada no navegador.
+Execute a migration antes de enviar esta versão ao GitHub Pages. O frontend novo depende das RPCs para cadastrar e movimentar estoque.
 
-## Possíveis melhorias futuras
+## Testes Recomendados Após A Migration
 
-- Recuperação de senha.
-- Exportação do estoque para CSV.
-- Registro de entrada e saída por quantidade personalizada.
-- Relatórios de movimentação.
-- Controle de permissões por usuário.
-- Inclusão de imagens dos produtos.
-- Transformação do sistema em PWA.
+- Cadastro com várias cores e tamanhos.
+- Combinações com quantidade zero.
+- Duplicado com caixa ou espaços diferentes.
+- Soma de duplicado ao estoque existente.
+- Entrada `+5`, venda `-3` e perda `-2` em um produto com 10 unidades.
+- Tentativa de retirar quantidade maior que o estoque.
+- Duas saídas simultâneas de uma unidade em um produto com 10 unidades; resultado esperado: 8.
+- Histórico com quantidade anterior, nova, diferença, tipo, usuário e motivo.
+- Arquivar, localizar nos arquivados e restaurar.
+- Conferência com divergência e aplicação confirmada.
+- Uso em 360 px, 390 px, 412 px, 768 px e desktop.
 
 ## Autor
 

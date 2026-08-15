@@ -1,19 +1,24 @@
 import { supabase } from './supabase-config.js';
-import { registrarMovimentacao, registrarMovimentacoes } from './historico.js';
+import { normalizarTexto } from './utils.js';
 
-const CAMPOS_PRODUTO_BASE = [
+const CAMPOS_COMPLETOS = [
   'id',
   'nome',
   'descricao',
+  'subcategoria',
   'categoria',
   'cor',
   'tamanho',
   'quantidade',
+  'valor_venda',
+  'estoque_minimo',
+  'ativo',
+  'arquivado_em',
   'created_at',
   'updated_at'
 ].join(',');
 
-const CAMPOS_PRODUTO_COMPLETO = [
+const CAMPOS_ANTIGOS = [
   'id',
   'nome',
   'descricao',
@@ -27,203 +32,107 @@ const CAMPOS_PRODUTO_COMPLETO = [
   'updated_at'
 ].join(',');
 
-let camposProdutoAtivos = CAMPOS_PRODUTO_COMPLETO;
-let produtoTemCamposExtras = true;
-
-function normalizarTexto(valor) {
-  return String(valor ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pt-BR');
+function normalizarProduto(produto) {
+  return {
+    ...produto,
+    descricao: produto.descricao ?? '',
+    subcategoria: produto.subcategoria ?? '',
+    tamanho: produto.tamanho ?? '',
+    valor_venda: produto.valor_venda ?? null,
+    estoque_minimo: Number(produto.estoque_minimo ?? 3),
+    ativo: produto.ativo ?? true,
+    arquivado_em: produto.arquivado_em ?? null,
+    quantidade: Number(produto.quantidade ?? 0)
+  };
 }
 
-// Garante que os dados enviados ao Supabase estejam limpos e no formato correto.
-function prepararProduto(produto) {
-  const valorVenda = produto.valorVenda === '' || produto.valorVenda === null || produto.valorVenda === undefined
-    ? null
-    : Number(produto.valorVenda);
+function prepararVariacao(produto) {
+  const valor = produto.valorVenda ?? produto.valor_venda;
 
-  const produtoLimpo = {
+  return {
     nome: normalizarTexto(produto.nome),
     descricao: normalizarTexto(produto.descricao),
+    subcategoria: normalizarTexto(produto.subcategoria),
     categoria: normalizarTexto(produto.categoria),
     cor: normalizarTexto(produto.cor),
     tamanho: normalizarTexto(produto.tamanho),
-    quantidade: Number(produto.quantidade)
+    quantidade: Number(produto.quantidade),
+    valor_venda: valor === '' || valor === null || valor === undefined ? null : Number(valor),
+    estoque_minimo: Number(produto.estoqueMinimo ?? produto.estoque_minimo ?? 3)
   };
-
-  if (produtoTemCamposExtras) {
-    produtoLimpo.subcategoria = normalizarTexto(produto.subcategoria);
-    produtoLimpo.valor_venda = valorVenda;
-  }
-
-  return produtoLimpo;
-}
-
-function normalizarProdutos(produtos) {
-  return (produtos ?? []).map((produto) => ({
-    ...produto,
-    subcategoria: produto.subcategoria ?? '',
-    valor_venda: produto.valor_venda ?? null
-  }));
-}
-
-function erroDeCampoExtraAusente(error) {
-  const mensagem = error?.message ?? '';
-  return mensagem.includes('subcategoria') || mensagem.includes('valor_venda');
-}
-
-async function selecionarProdutos(campos) {
-  return supabase
-    .from('produtos')
-    .select(campos)
-    .order('nome', { ascending: true });
 }
 
 export async function listarProdutos() {
-  let { data, error } = await selecionarProdutos(CAMPOS_PRODUTO_COMPLETO);
-
-  if (error && erroDeCampoExtraAusente(error)) {
-    produtoTemCamposExtras = false;
-    camposProdutoAtivos = CAMPOS_PRODUTO_BASE;
-    const respostaBase = await selecionarProdutos(CAMPOS_PRODUTO_BASE);
-    data = respostaBase.data;
-    error = respostaBase.error;
-  } else {
-    produtoTemCamposExtras = true;
-    camposProdutoAtivos = CAMPOS_PRODUTO_COMPLETO;
-  }
-
-  if (error) {
-    throw error;
-  }
-
-  return normalizarProdutos(data);
-}
-
-export async function criarProduto(produto, usuario) {
-  const produtosCriados = await criarProdutos([produto], usuario);
-  return produtosCriados[0];
-}
-
-export async function criarProdutos(produtos, usuario) {
-  const novosProdutos = produtos.map(prepararProduto);
-
-  const { data, error } = await supabase
+  let resposta = await supabase
     .from('produtos')
-    .insert(novosProdutos)
-    .select(camposProdutoAtivos);
+    .select(CAMPOS_COMPLETOS)
+    .order('nome', { ascending: true });
 
-  if (error) {
-    throw error;
+  if (resposta.error && /estoque_minimo|ativo|arquivado_em/.test(resposta.error.message ?? '')) {
+    resposta = await supabase
+      .from('produtos')
+      .select(CAMPOS_ANTIGOS)
+      .order('nome', { ascending: true });
   }
 
-  const produtosCriados = normalizarProdutos(data);
-
-  await registrarMovimentacoes(
-    produtosCriados.map((produtoCriado) => ({
-      produtoId: produtoCriado.id,
-      produtoNome: produtoCriado.nome,
-      quantidadeAnterior: 0,
-      quantidadeNova: produtoCriado.quantidade,
-      tipo: 'entrada',
-      usuario
-    }))
-  );
-
-  return produtosCriados;
+  if (resposta.error) throw resposta.error;
+  return (resposta.data ?? []).map(normalizarProduto);
 }
 
-export async function editarProduto(produtoId, produto, produtoAnterior, usuario) {
-  const produtoAtualizado = prepararProduto(produto);
-
-  const { data, error } = await supabase
-    .from('produtos')
-    .update(produtoAtualizado)
-    .eq('id', produtoId)
-    .select(camposProdutoAtivos)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  const produtoEditado = normalizarProdutos([data])[0];
-
-  await registrarMovimentacao({
-    produtoId: produtoEditado.id,
-    produtoNome: produtoEditado.nome,
-    quantidadeAnterior: Number(produtoAnterior.quantidade),
-    quantidadeNova: produtoEditado.quantidade,
-    tipo: 'edição',
-    usuario
+export async function cadastrarVariacoes(variacoes, somarDuplicados = false) {
+  const { data, error } = await supabase.rpc('cadastrar_variacoes', {
+    p_variacoes: variacoes.map(prepararVariacao),
+    p_somar_duplicados: somarDuplicados
   });
 
-  return produtoEditado;
+  if (error) throw error;
+  return data ?? { status: 'sucesso', criados: 0, atualizados: 0, duplicados: [] };
 }
 
-export async function excluirProduto(produto, usuario) {
-  const { error } = await supabase
-    .from('produtos')
-    .delete()
-    .eq('id', produto.id);
-
-  if (error) {
-    throw error;
-  }
-
-  await registrarMovimentacao({
-    produtoId: produto.id,
-    produtoNome: produto.nome,
-    quantidadeAnterior: Number(produto.quantidade),
-    quantidadeNova: 0,
-    tipo: 'exclusão',
-    usuario
-  });
+export async function criarProdutos(produtos, somarDuplicados = false) {
+  return cadastrarVariacoes(produtos, somarDuplicados);
 }
 
-// Aumenta ou diminui uma unidade e registra a movimentação no histórico.
-export async function ajustarQuantidade(produto, delta, usuario) {
-  const quantidadeAnterior = Number(produto.quantidade);
-  const quantidadeNova = Math.max(0, quantidadeAnterior + delta);
-
-  if (quantidadeNova === quantidadeAnterior) {
-    return produto;
-  }
-
-  const { data, error } = await supabase
-    .from('produtos')
-    .update({ quantidade: quantidadeNova })
-    .eq('id', produto.id)
-    .select(camposProdutoAtivos)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  const produtoAtualizado = normalizarProdutos([data])[0];
-
-  await registrarMovimentacao({
-    produtoId: produtoAtualizado.id,
-    produtoNome: produtoAtualizado.nome,
-    quantidadeAnterior,
-    quantidadeNova,
-    tipo: delta > 0 ? 'entrada' : 'saída',
-    usuario
+export async function editarProduto(produtoId, produto) {
+  const produtoLimpo = prepararVariacao({
+    ...produto,
+    quantidade: 0
   });
 
-  return produtoAtualizado;
+  delete produtoLimpo.quantidade;
+
+  const { data, error } = await supabase.rpc('editar_produto', {
+    p_produto_id: produtoId,
+    p_dados: produtoLimpo
+  });
+
+  if (error) throw error;
+  return normalizarProduto(data);
+}
+
+export async function definirProdutoArquivado(produtoId, arquivar) {
+  const { data, error } = await supabase.rpc('definir_produto_arquivado', {
+    p_produto_id: produtoId,
+    p_arquivar: arquivar
+  });
+
+  if (error) throw error;
+  return normalizarProduto(data);
+}
+
+export async function excluirProdutoPermanentemente(produtoId) {
+  const { error } = await supabase.rpc('excluir_produto_permanentemente', {
+    p_produto_id: produtoId
+  });
+
+  if (error) throw error;
 }
 
 export function observarProdutos(callback) {
   const canal = supabase
     .channel('produtos-rpg')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'produtos' },
-      callback
-    )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, callback)
     .subscribe();
 
-  return () => {
-    supabase.removeChannel(canal);
-  };
+  return () => supabase.removeChannel(canal);
 }

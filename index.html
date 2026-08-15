@@ -2,8 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#123654">
   <title>RPG Multimarcas | Estoque</title>
+  <link rel="icon" href="./assets/favicon.png">
+  <link rel="apple-touch-icon" href="./assets/app-icon.png">
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
@@ -11,96 +14,178 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="loading-overlay" class="loading-overlay" hidden>
-    <div class="loading-box">Carregando...</div>
+    <div class="loading-box">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="loading-text">Carregando...</span>
+    </div>
   </div>
 
-  <main>
-    <section id="login-view" class="login-view">
-      <div class="login-panel">
-        <p class="brand-kicker">Controle de estoque</p>
-        <h1>RPG Multimarcas</h1>
-        <form id="login-form" class="login-form">
-          <label for="email">E-mail</label>
-          <input id="email" name="email" type="email" autocomplete="email" required>
-
-          <label for="senha">Senha</label>
-          <input id="senha" name="senha" type="password" autocomplete="current-password" required>
-
-          <button id="entrar-btn" class="primary-button" type="submit">Entrar</button>
-        </form>
-        <p id="config-alert" class="config-alert" hidden></p>
-      </div>
-    </section>
-
-    <section id="app-view" class="app-view" hidden>
-      <header class="app-header">
-        <div>
+  <section id="login-view" class="login-view">
+    <div class="login-panel">
+      <div class="login-brand">
+        <img class="brand-logo login-logo" data-brand-logo src="./assets/logo-rpg.png" alt="RPG Multimarcas">
+        <div data-brand-fallback>
           <p class="brand-kicker">RPG Multimarcas</p>
-          <h1>Estoque</h1>
+          <h1>Controle de estoque</h1>
         </div>
-        <div class="session-actions">
-          <span id="usuario-email" class="user-email"></span>
-          <button id="sair-btn" class="ghost-button" type="button">Sair</button>
-        </div>
-      </header>
+      </div>
 
-      <nav class="tabs" aria-label="Seções">
-        <button class="tab-button active" type="button" data-tab="estoque">Estoque</button>
-        <button class="tab-button" type="button" data-tab="historico">Histórico</button>
+      <form id="login-form" class="login-form">
+        <label for="email">E-mail
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </label>
+
+        <label for="senha">Senha
+          <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+        </label>
+
+        <button id="entrar-btn" class="button primary-button" type="submit">Entrar</button>
+      </form>
+      <p id="config-alert" class="notice warning" hidden></p>
+    </div>
+  </section>
+
+  <div id="app-view" class="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-logo" data-brand-logo src="./assets/logo-rpg.png" alt="RPG Multimarcas">
+        <div data-brand-fallback>
+          <strong>RPG</strong>
+          <span>Multimarcas</span>
+        </div>
+      </div>
+
+      <nav class="side-nav" aria-label="Navegação principal">
+        <button class="nav-button active" type="button" data-section="dashboard">Visão geral</button>
+        <button class="nav-button" type="button" data-section="estoque">Estoque</button>
+        <button class="nav-button nav-command" type="button" data-action="novo-produto">Novo produto</button>
+        <button class="nav-button" type="button" data-section="conferencia">Conferência</button>
+        <button class="nav-button" type="button" data-section="historico">Histórico</button>
+        <button class="nav-button" type="button" data-section="arquivados">Arquivados</button>
       </nav>
 
-      <section id="estoque-section" class="content-section">
-        <div class="top-bar">
-          <div class="metrics" aria-label="Resumo do estoque">
-            <div class="metric">
-              <span>Total de peças</span>
-              <strong id="total-pecas">0</strong>
-            </div>
-            <div class="metric">
-              <span>Modelos cadastrados</span>
-              <strong id="total-modelos">0</strong>
-            </div>
+      <div class="sidebar-session">
+        <span id="usuario-email" class="user-email"></span>
+        <button id="sair-btn" class="button ghost-button" type="button">Sair</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="mobile-header">
+        <div class="mobile-brand">
+          <span>RPG Multimarcas</span>
+          <strong id="page-title">Visão geral</strong>
+        </div>
+        <button id="mobile-sair-btn" class="button icon-text-button" type="button">Sair</button>
+      </header>
+
+      <section id="dashboard-section" class="app-section">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Visão geral</p>
+            <h1>Estoque da loja</h1>
           </div>
-          <button id="novo-produto-btn" class="primary-button add-product-button" type="button">+ Novo produto</button>
+          <button class="button primary-button" type="button" data-action="novo-produto">Novo produto</button>
         </div>
 
-        <section id="categorias-view" class="category-view">
-          <div class="global-filter-panel">
+        <div class="dashboard-metrics" aria-label="Resumo do estoque">
+          <article class="summary-metric primary-metric">
+            <span>Total de peças</span>
+            <strong id="total-pecas">0</strong>
+          </article>
+          <article class="summary-metric">
+            <span>Variações ativas</span>
+            <strong id="total-modelos">0</strong>
+          </article>
+          <article class="summary-metric warning-metric">
+            <span>Estoque baixo</span>
+            <strong id="total-baixo">0</strong>
+          </article>
+          <article class="summary-metric danger-metric">
+            <span>Produtos zerados</span>
+            <strong id="total-zerados">0</strong>
+          </article>
+          <article class="summary-metric value-metric">
+            <span>Valor do estoque</span>
+            <strong id="valor-estoque">R$ 0,00</strong>
+          </article>
+          <article class="summary-metric success-metric">
+            <span>Entradas do mês</span>
+            <strong id="entradas-mes">+0</strong>
+          </article>
+          <article class="summary-metric danger-metric">
+            <span>Saídas do mês</span>
+            <strong id="saidas-mes">-0</strong>
+          </article>
+        </div>
+
+        <div class="dashboard-columns">
+          <section class="panel attention-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Prioridade</p>
+                <h2>Produtos que precisam de atenção</h2>
+              </div>
+              <button class="button ghost-button compact-button" type="button" data-section="estoque" data-filter-attention="true">Ver no estoque</button>
+            </div>
+            <div id="atencao-lista" class="attention-list"></div>
+            <p id="atencao-vazio" class="empty-state" hidden>Nenhum produto precisa de atenção agora.</p>
+          </section>
+
+          <section class="panel quick-panel">
+            <p class="eyebrow">Operações</p>
+            <h2>Ações rápidas</h2>
+            <div class="quick-actions">
+              <button class="button secondary-button" type="button" data-action="novo-produto">Cadastrar variações</button>
+              <button class="button ghost-button" type="button" data-section="conferencia">Iniciar conferência</button>
+              <button class="button ghost-button" type="button" data-section="historico">Consultar histórico</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="estoque-section" class="app-section" hidden>
+        <div class="page-heading stock-heading">
+          <div>
+            <p class="eyebrow">Produtos ativos</p>
+            <h1>Estoque</h1>
+          </div>
+          <div class="heading-actions">
+            <div class="segmented-control" aria-label="Modo de visualização">
+              <button class="active" type="button" data-view-mode="individual">Individual</button>
+              <button type="button" data-view-mode="modelo">Por modelo</button>
+            </div>
+            <button class="button primary-button" type="button" data-action="novo-produto">Novo produto</button>
+          </div>
+        </div>
+
+        <section id="categorias-view" class="stock-stack">
+          <div class="panel filter-panel">
             <div class="section-heading">
               <h2>Pesquisar no estoque inteiro</h2>
-              <button id="limpar-filtros-gerais-btn" class="ghost-button" type="button" hidden>Limpar filtros</button>
+              <button id="limpar-filtros-gerais-btn" class="button text-button" type="button" hidden>Limpar filtros</button>
             </div>
 
             <div class="filters global-filters">
-              <label class="search-field" for="busca-geral">
-                <span>Pesquisar produto</span>
-                <input id="busca-geral" type="search" placeholder="Nome do produto" autocomplete="off">
+              <label class="wide-field" for="busca-geral">Produto
+                <input id="busca-geral" type="search" placeholder="Nome, descrição, cor ou tamanho" autocomplete="off">
               </label>
-
-              <label for="filtro-geral-categoria">
-                <span>Categoria</span>
+              <label for="filtro-geral-categoria">Categoria
                 <select id="filtro-geral-categoria"></select>
               </label>
-
-              <label for="filtro-geral-subcategoria">
-                <span>Subcategoria</span>
+              <label for="filtro-geral-subcategoria">Subcategoria
                 <select id="filtro-geral-subcategoria"></select>
               </label>
-
-              <label for="filtro-geral-cor">
-                <span>Cor</span>
+              <label for="filtro-geral-cor">Cor
                 <select id="filtro-geral-cor"></select>
               </label>
-
-              <label for="filtro-geral-tamanho">
-                <span>Tamanho</span>
+              <label for="filtro-geral-tamanho">Tamanho
                 <select id="filtro-geral-tamanho"></select>
               </label>
-
-              <label for="filtro-geral-estoque">
-                <span>Estoque</span>
+              <label for="filtro-geral-estoque">Situação
                 <select id="filtro-geral-estoque">
                   <option value="todos">Todos</option>
+                  <option value="atencao">Baixo ou sem estoque</option>
                   <option value="baixo">Estoque baixo</option>
                   <option value="zerado">Sem estoque</option>
                 </select>
@@ -109,66 +194,53 @@
           </div>
 
           <div id="categorias-conteudo" class="category-content">
-            <label class="category-search-field" for="busca-categoria">
-              <span>Pesquisar categoria</span>
-              <input id="busca-categoria" type="search" placeholder="Nome da categoria" autocomplete="off">
+            <label class="category-search-field" for="busca-categoria">Pesquisar categoria
+              <input id="busca-categoria" type="search" placeholder="Comece a digitar" autocomplete="off">
             </label>
-
             <div id="categorias-lista" class="category-list" aria-live="polite"></div>
             <p id="categorias-vazio" class="empty-state" hidden>Nenhuma categoria encontrada.</p>
           </div>
 
-          <section id="resultado-geral-view" class="products-view" hidden>
-            <div class="folder-heading">
-              <div>
-                <p class="brand-kicker">Resultado geral</p>
-                <h2 id="resultado-geral-titulo">Produtos encontrados</h2>
-              </div>
+          <section id="resultado-geral-view" class="stock-stack" hidden>
+            <div class="section-heading">
+              <h2 id="resultado-geral-titulo">Produtos encontrados</h2>
             </div>
-
             <div id="produtos-gerais-lista" class="products-list" aria-live="polite"></div>
             <p id="produtos-gerais-vazio" class="empty-state" hidden>Nenhum produto encontrado.</p>
           </section>
         </section>
 
-        <section id="produtos-view" class="products-view" hidden>
+        <section id="produtos-view" class="stock-stack" hidden>
           <div class="folder-heading">
-            <button id="voltar-categorias-btn" class="ghost-button" type="button">Voltar para categorias</button>
+            <button id="voltar-categorias-btn" class="button ghost-button compact-button" type="button">Voltar</button>
             <div>
-              <p class="brand-kicker">Categoria</p>
+              <p class="eyebrow">Categoria</p>
               <h2 id="categoria-atual-titulo">Produtos</h2>
             </div>
           </div>
 
-          <div class="filters">
-            <label class="search-field" for="busca">
-              <span>Pesquisar produto</span>
-              <input id="busca" type="search" placeholder="Nome do produto" autocomplete="off">
-            </label>
-
-            <label for="filtro-subcategoria">
-              <span>Subcategoria</span>
-              <select id="filtro-subcategoria"></select>
-            </label>
-
-            <label for="filtro-cor">
-              <span>Cor</span>
-              <select id="filtro-cor"></select>
-            </label>
-
-            <label for="filtro-tamanho">
-              <span>Tamanho</span>
-              <select id="filtro-tamanho"></select>
-            </label>
-
-            <label for="filtro-estoque">
-              <span>Estoque</span>
-              <select id="filtro-estoque">
-                <option value="todos">Todos</option>
-                <option value="baixo">Estoque baixo</option>
-                <option value="zerado">Sem estoque</option>
-              </select>
-            </label>
+          <div class="panel filter-panel">
+            <div class="filters folder-filters">
+              <label class="wide-field" for="busca">Produto
+                <input id="busca" type="search" placeholder="Nome, descrição, cor ou tamanho" autocomplete="off">
+              </label>
+              <label for="filtro-subcategoria">Subcategoria
+                <select id="filtro-subcategoria"></select>
+              </label>
+              <label for="filtro-cor">Cor
+                <select id="filtro-cor"></select>
+              </label>
+              <label for="filtro-tamanho">Tamanho
+                <select id="filtro-tamanho"></select>
+              </label>
+              <label for="filtro-estoque">Situação
+                <select id="filtro-estoque">
+                  <option value="todos">Todos</option>
+                  <option value="baixo">Estoque baixo</option>
+                  <option value="zerado">Sem estoque</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div id="produtos-lista" class="products-list" aria-live="polite"></div>
@@ -176,42 +248,294 @@
         </section>
       </section>
 
-      <section id="historico-section" class="content-section" hidden>
-        <div class="section-heading">
-          <h2>Histórico</h2>
-          <button id="atualizar-historico-btn" class="ghost-button" type="button">Atualizar</button>
+      <section id="historico-section" class="app-section" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Auditoria</p>
+            <h1>Histórico</h1>
+          </div>
+          <button id="atualizar-historico-btn" class="button ghost-button" type="button">Atualizar</button>
         </div>
+
+        <div class="panel filter-panel">
+          <div class="period-shortcuts" aria-label="Período">
+            <button class="button chip-button" type="button" data-period="hoje">Hoje</button>
+            <button class="button chip-button" type="button" data-period="semana">Esta semana</button>
+            <button class="button chip-button" type="button" data-period="mes">Este mês</button>
+            <button class="button chip-button" type="button" data-period="todos">Todo o período</button>
+          </div>
+          <div class="filters history-filters">
+            <label for="historico-inicio">De
+              <input id="historico-inicio" type="date">
+            </label>
+            <label for="historico-fim">Até
+              <input id="historico-fim" type="date">
+            </label>
+            <label for="historico-produto">Produto
+              <input id="historico-produto" type="search" placeholder="Nome do produto">
+            </label>
+            <label for="historico-categoria">Categoria
+              <select id="historico-categoria"></select>
+            </label>
+            <label for="historico-usuario">Usuário
+              <input id="historico-usuario" type="search" placeholder="E-mail">
+            </label>
+            <label for="historico-tipo">Tipo
+              <select id="historico-tipo">
+                <option value="">Todos</option>
+                <option value="cadastro">Cadastro</option>
+                <option value="entrada">Entrada</option>
+                <option value="venda">Venda</option>
+                <option value="saida">Saída</option>
+                <option value="devolucao">Devolução</option>
+                <option value="troca_entrada">Troca - entrada</option>
+                <option value="troca_saida">Troca - saída</option>
+                <option value="perda_avaria">Perda/Avaria</option>
+                <option value="ajuste_manual">Ajuste manual</option>
+                <option value="ajuste_conferencia">Ajuste de conferência</option>
+                <option value="edicao">Edição</option>
+                <option value="arquivamento">Arquivamento</option>
+                <option value="restauracao">Restauração</option>
+                <option value="exclusao">Exclusão</option>
+              </select>
+            </label>
+            <label class="wide-field" for="historico-busca">Busca geral
+              <input id="historico-busca" type="search" placeholder="Produto, motivo, cor ou tamanho">
+            </label>
+          </div>
+        </div>
+
         <div id="historico-lista" class="history-list" aria-live="polite"></div>
-        <p id="historico-vazio" class="empty-state" hidden>Nenhuma movimentação registrada.</p>
+        <p id="historico-vazio" class="empty-state" hidden>Nenhuma movimentação encontrada.</p>
+        <button id="carregar-mais-historico-btn" class="button ghost-button load-more-button" type="button" hidden>Carregar mais</button>
       </section>
-    </section>
-  </main>
 
-  <dialog id="produto-dialog" class="modal">
-    <form id="produto-form" class="modal-panel" novalidate>
+      <section id="conferencia-section" class="app-section" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Contagem física</p>
+            <h1>Conferência de estoque</h1>
+          </div>
+        </div>
+
+        <div id="conferencia-inicio" class="panel conference-start">
+          <div>
+            <h2>Conferência da loja</h2>
+            <p>Compare a contagem física com a quantidade registrada no sistema.</p>
+          </div>
+          <button id="iniciar-conferencia-btn" class="button primary-button" type="button">Iniciar conferência</button>
+        </div>
+
+        <div id="conferencia-ativa" class="conference-layout" hidden>
+          <div class="panel conference-toolbar">
+            <div>
+              <span id="conferencia-progresso-texto">0 de 0 produtos conferidos</span>
+              <div class="progress-track"><span id="conferencia-progresso-barra"></span></div>
+            </div>
+            <label for="conferencia-busca">Localizar produto
+              <input id="conferencia-busca" type="search" placeholder="Nome, cor ou tamanho">
+            </label>
+          </div>
+
+          <article id="conferencia-item" class="panel conference-item"></article>
+
+          <div class="conference-navigation">
+            <button id="conferencia-anterior-btn" class="button ghost-button" type="button">Anterior</button>
+            <button id="conferencia-proximo-btn" class="button secondary-button" type="button">Salvar e próximo</button>
+          </div>
+
+          <section id="conferencia-resumo" class="panel conference-summary" hidden>
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Contagem concluída</p>
+                <h2>Resumo da conferência</h2>
+              </div>
+            </div>
+            <div id="conferencia-resumo-metricas" class="conference-result-metrics"></div>
+            <div id="conferencia-divergencias" class="difference-list"></div>
+            <div class="form-actions">
+              <button id="cancelar-conferencia-btn" class="button danger-text-button" type="button">Cancelar conferência</button>
+              <button id="aplicar-conferencia-btn" class="button primary-button" type="button">Aplicar correções</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="arquivados-section" class="app-section" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Catálogo inativo</p>
+            <h1>Produtos arquivados</h1>
+          </div>
+        </div>
+        <label class="standalone-search" for="busca-arquivados">Pesquisar arquivados
+          <input id="busca-arquivados" type="search" placeholder="Nome, categoria, cor ou tamanho">
+        </label>
+        <div id="arquivados-lista" class="products-list" aria-live="polite"></div>
+        <p id="arquivados-vazio" class="empty-state" hidden>Nenhum produto arquivado.</p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegação mobile">
+      <button class="bottom-nav-button active" type="button" data-section="dashboard">Início</button>
+      <button class="bottom-nav-button" type="button" data-section="estoque">Estoque</button>
+      <button class="bottom-add-button" type="button" data-action="novo-produto" aria-label="Novo produto">+</button>
+      <button class="bottom-nav-button" type="button" data-section="historico">Histórico</button>
+      <button class="bottom-nav-button" type="button" data-section="arquivados">Arquivados</button>
+    </nav>
+  </div>
+
+  <dialog id="variacoes-dialog" class="modal large-modal">
+    <form id="variacoes-form" class="modal-panel" novalidate>
       <div class="modal-header">
-        <h2 id="produto-form-titulo">Novo produto</h2>
-        <button id="fechar-modal-btn" class="icon-button" type="button" aria-label="Fechar">×</button>
+        <div>
+          <p class="eyebrow">Cadastro rápido</p>
+          <h2>Novo produto por variações</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="variacoes-dialog" aria-label="Fechar">×</button>
       </div>
 
-      <input id="produto-id" type="hidden">
-      <div id="produtos-form-lista" class="multi-product-list"></div>
+      <section class="form-step">
+        <div class="step-title"><span>1</span><h3>Dados do produto</h3></div>
+        <div class="form-grid base-product-grid">
+          <label class="wide-field" for="variacao-nome">Nome do produto
+            <input id="variacao-nome" type="text" maxlength="120" required>
+          </label>
+          <label for="variacao-categoria">Categoria
+            <input id="variacao-categoria" type="text" maxlength="80" list="categorias-datalist" required>
+          </label>
+          <label for="variacao-subcategoria">Subcategoria
+            <input id="variacao-subcategoria" type="text" maxlength="80" list="subcategorias-datalist">
+          </label>
+          <label class="wide-field" for="variacao-descricao">Descrição
+            <input id="variacao-descricao" type="text" maxlength="160">
+          </label>
+          <label for="variacao-valor">Valor de venda
+            <input id="variacao-valor" type="number" min="0" step="0.01" inputmode="decimal">
+          </label>
+          <label for="variacao-estoque-minimo">Estoque mínimo
+            <input id="variacao-estoque-minimo" type="number" min="0" step="1" value="3" inputmode="numeric">
+          </label>
+        </div>
+      </section>
 
-      <div class="row-tools">
-        <button id="adicionar-produto-linha-btn" class="ghost-button add-row-button" type="button">
-          + Produto vazio
-        </button>
-        <button id="copiar-produto-linha-btn" class="ghost-button add-row-button" type="button">
-          Copiar produto anterior
-        </button>
+      <div class="variation-selectors">
+        <section class="form-step">
+          <div class="step-title"><span>2</span><h3>Cores</h3></div>
+          <div class="token-entry">
+            <input id="variacao-cor-input" type="text" maxlength="80" list="cores-datalist" placeholder="Digite ou escolha uma cor">
+            <button id="adicionar-cor-btn" class="button secondary-button" type="button">Adicionar</button>
+          </div>
+          <div id="cores-selecionadas" class="token-list"></div>
+          <div id="cores-sugestoes" class="option-chips"></div>
+        </section>
+
+        <section class="form-step">
+          <div class="step-title"><span>3</span><h3>Tamanhos</h3></div>
+          <div class="token-entry">
+            <input id="variacao-tamanho-input" type="text" maxlength="40" list="tamanhos-datalist" placeholder="Digite ou escolha um tamanho">
+            <button id="adicionar-tamanho-btn" class="button secondary-button" type="button">Adicionar</button>
+          </div>
+          <div id="tamanhos-selecionados" class="token-list"></div>
+          <div id="tamanhos-sugestoes" class="option-chips"></div>
+        </section>
       </div>
 
-      <div class="form-actions">
-        <button id="cancelar-produto-btn" class="ghost-button" type="button">Cancelar</button>
-        <button id="salvar-produto-btn" class="primary-button" type="submit">Cadastrar produtos</button>
+      <section class="form-step matrix-step">
+        <div class="step-title"><span>4</span><h3>Quantidades por variação</h3></div>
+        <div id="matriz-vazia" class="matrix-placeholder">Adicione pelo menos uma cor e um tamanho.</div>
+        <div id="matriz-container" class="matrix-scroll" hidden></div>
+      </section>
+
+      <p id="variacoes-form-erro" class="form-error" role="alert" hidden></p>
+      <div class="form-actions split-actions">
+        <button id="abrir-cadastro-linhas-btn" class="button text-button" type="button">Usar cadastro por linhas</button>
+        <div>
+          <button class="button ghost-button" type="button" data-close-dialog="variacoes-dialog">Cancelar</button>
+          <button id="salvar-variacoes-btn" class="button primary-button" type="submit">Cadastrar variações</button>
+        </div>
       </div>
     </form>
   </dialog>
+
+  <dialog id="produto-dialog" class="modal large-modal">
+    <form id="produto-form" class="modal-panel" novalidate>
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Cadastro individual</p>
+          <h2 id="produto-form-titulo">Novo produto</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="produto-dialog" aria-label="Fechar">×</button>
+      </div>
+      <div id="produtos-form-lista" class="multi-product-list"></div>
+      <div id="row-tools" class="row-tools">
+        <button id="adicionar-produto-linha-btn" class="button ghost-button" type="button">Produto vazio</button>
+        <button id="copiar-produto-linha-btn" class="button ghost-button" type="button">Copiar anterior</button>
+      </div>
+      <p id="produto-form-erro" class="form-error" role="alert" hidden></p>
+      <div class="form-actions">
+        <button class="button ghost-button" type="button" data-close-dialog="produto-dialog">Cancelar</button>
+        <button id="salvar-produto-btn" class="button primary-button" type="submit">Cadastrar produtos</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="duplicados-dialog" class="modal">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow danger-eyebrow">Atenção</p>
+          <h2>Variações já cadastradas</h2>
+        </div>
+        <button class="icon-button" type="button" data-duplicate-choice="cancelar" aria-label="Fechar">×</button>
+      </div>
+      <div id="duplicados-lista" class="duplicate-list"></div>
+      <div class="form-actions">
+        <button class="button ghost-button" type="button" data-duplicate-choice="cancelar">Cancelar</button>
+        <button id="somar-duplicados-btn" class="button primary-button" type="button" data-duplicate-choice="somar">Somar ao estoque existente</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="movimentacao-dialog" class="modal">
+    <form id="movimentacao-form" class="modal-panel" novalidate>
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Operação segura</p>
+          <h2>Movimentar estoque</h2>
+        </div>
+        <button class="icon-button" type="button" data-close-dialog="movimentacao-dialog" aria-label="Fechar">×</button>
+      </div>
+      <div id="movimentacao-produto" class="movement-product"></div>
+      <label for="movimentacao-tipo">Tipo da movimentação
+        <select id="movimentacao-tipo" required></select>
+      </label>
+      <div id="movimentacao-direcao-grupo" hidden>
+        <span class="field-label">Direção do ajuste</span>
+        <div class="segmented-control full-segmented">
+          <button class="active" type="button" data-adjustment-sign="1">Adicionar</button>
+          <button type="button" data-adjustment-sign="-1">Remover</button>
+        </div>
+      </div>
+      <label for="movimentacao-quantidade">Quantidade
+        <input id="movimentacao-quantidade" type="number" min="1" step="1" inputmode="numeric" required>
+      </label>
+      <label for="movimentacao-motivo">Observação ou motivo
+        <textarea id="movimentacao-motivo" rows="3" maxlength="300" placeholder="Opcional para entrada e venda"></textarea>
+      </label>
+      <div id="movimentacao-preview" class="movement-preview"></div>
+      <p id="movimentacao-erro" class="form-error" role="alert" hidden></p>
+      <div class="form-actions">
+        <button class="button ghost-button" type="button" data-close-dialog="movimentacao-dialog">Cancelar</button>
+        <button id="confirmar-movimentacao-btn" class="button primary-button" type="submit">Confirmar movimentação</button>
+      </div>
+    </form>
+  </dialog>
+
+  <datalist id="categorias-datalist"></datalist>
+  <datalist id="subcategorias-datalist"></datalist>
+  <datalist id="cores-datalist"></datalist>
+  <datalist id="tamanhos-datalist"></datalist>
 
   <script type="module" src="./js/app.js"></script>
 </body>
