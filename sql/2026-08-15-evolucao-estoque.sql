@@ -56,6 +56,11 @@ alter table public.movimentacoes
 alter table public.movimentacoes
   add column if not exists produto_tamanho text;
 
+-- A regra antiga ainda aceita os tipos com acento. Remova-a antes de
+-- converter o historico para os identificadores sem acento usados nas RPCs.
+alter table public.movimentacoes
+  drop constraint if exists movimentacoes_tipo_check;
+
 update public.movimentacoes
 set
   diferenca = coalesce(diferenca, quantidade_nova - quantidade_anterior),
@@ -81,9 +86,6 @@ alter table public.movimentacoes
   alter column produto_subcategoria set default '',
   alter column produto_cor set default '',
   alter column produto_tamanho set default '';
-
-alter table public.movimentacoes
-  drop constraint if exists movimentacoes_tipo_check;
 
 alter table public.movimentacoes
   add constraint movimentacoes_tipo_check
