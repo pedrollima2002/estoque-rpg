@@ -13,8 +13,10 @@ export async function obterConferenciaAberta() {
   return data;
 }
 
-export async function iniciarConferencia() {
-  const { data, error } = await supabase.rpc('iniciar_conferencia');
+export async function iniciarConferencia(categoria) {
+  const { data, error } = await supabase.rpc('iniciar_conferencia', {
+    p_categoria: categoria
+  });
   if (error) throw error;
   return data;
 }
@@ -46,9 +48,17 @@ export async function listarItensConferencia(conferenciaId) {
   if (error) throw error;
 
   return (data ?? []).sort((a, b) => {
-    const nomeA = a.produtos?.nome ?? '';
-    const nomeB = b.produtos?.nome ?? '';
-    return nomeA.localeCompare(nomeB, 'pt-BR');
+    const produtoA = a.produtos ?? {};
+    const produtoB = b.produtos ?? {};
+    return [produtoA.subcategoria, produtoA.nome, produtoA.cor, produtoA.tamanho]
+      .map((valor) => valor ?? '')
+      .join('|')
+      .localeCompare(
+        [produtoB.subcategoria, produtoB.nome, produtoB.cor, produtoB.tamanho]
+          .map((valor) => valor ?? '')
+          .join('|'),
+        'pt-BR'
+      );
   });
 }
 

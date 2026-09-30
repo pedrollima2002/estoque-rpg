@@ -102,6 +102,7 @@ estoque-rpg/
 |   `-- utils.js
 |-- sql/
 |   |-- 2026-08-15-evolucao-estoque.sql
+|   |-- 2026-09-30-conferencia-por-categoria.sql
 |   |-- adicionar-subcategoria-valor.sql
 |   `-- padronizar-produtos-maiusculas.sql
 |-- index.html
@@ -129,6 +130,14 @@ sql/2026-08-15-evolucao-estoque.sql
 ```
 
 A migration usa `ALTER TABLE`, `CREATE TABLE`, `CREATE INDEX` e `CREATE OR REPLACE FUNCTION`. Ela não apaga produtos, movimentações ou usuários existentes.
+
+Para habilitar a conferência separada por categoria, execute depois:
+
+```text
+sql/2026-09-30-conferencia-por-categoria.sql
+```
+
+Essa migration preserva o histórico, adiciona a categoria às conferências e passa a incluir somente produtos ativos com quantidade maior que zero.
 
 Novas colunas em `produtos`:
 

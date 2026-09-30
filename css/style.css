@@ -947,15 +947,29 @@ textarea[aria-invalid="true"] {
 }
 
 .conference-start {
+  display: grid;
+  gap: 14px;
+}
+
+.conference-category-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
 }
 
-.conference-start p {
+.conference-category-heading p {
   margin: 5px 0 0;
   color: var(--muted);
+}
+
+.conference-category-card {
+  border-left-color: var(--green-700);
+}
+
+.conference-category-card .folder-label {
+  background: var(--green-100);
+  color: var(--green-700) !important;
 }
 
 .conference-layout {
@@ -973,6 +987,11 @@ textarea[aria-invalid="true"] {
 .conference-toolbar span {
   color: var(--navy-950);
   font-weight: 800;
+}
+
+.conference-toolbar h2 {
+  margin: 8px 0 10px;
+  font-size: 1.2rem;
 }
 
 .progress-track {
@@ -1002,6 +1021,13 @@ textarea[aria-invalid="true"] {
   display: grid;
   gap: 7px;
   text-align: center;
+}
+
+.conference-item-details {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
 }
 
 .conference-system-qty {
@@ -1574,7 +1600,7 @@ textarea[aria-invalid="true"] {
 
   .page-heading,
   .heading-actions,
-  .conference-start {
+  .conference-category-heading {
     align-items: stretch;
     flex-direction: column;
   }

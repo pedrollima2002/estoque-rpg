@@ -318,22 +318,27 @@
           </div>
         </div>
 
-        <div id="conferencia-inicio" class="panel conference-start">
-          <div>
-            <h2>Conferência da loja</h2>
-            <p>Compare a contagem física com a quantidade registrada no sistema.</p>
+        <div id="conferencia-inicio" class="conference-start">
+          <div class="panel conference-category-heading">
+            <div>
+              <h2>Escolha uma categoria</h2>
+              <p>Cada pasta inicia uma conferência independente e mostra apenas produtos com estoque registrado.</p>
+            </div>
           </div>
-          <button id="iniciar-conferencia-btn" class="button primary-button" type="button">Iniciar conferência</button>
+          <div id="conferencia-categorias" class="category-list" aria-live="polite"></div>
+          <p id="conferencia-categorias-vazio" class="empty-state" hidden>Nenhuma categoria possui produtos com estoque.</p>
         </div>
 
         <div id="conferencia-ativa" class="conference-layout" hidden>
           <div class="panel conference-toolbar">
             <div>
+              <span class="folder-label">Categoria em conferência</span>
+              <h2 id="conferencia-categoria-titulo"></h2>
               <span id="conferencia-progresso-texto">0 de 0 produtos conferidos</span>
               <div class="progress-track"><span id="conferencia-progresso-barra"></span></div>
             </div>
             <label for="conferencia-busca">Localizar produto
-              <input id="conferencia-busca" type="search" placeholder="Nome, cor ou tamanho">
+              <input id="conferencia-busca" type="search" placeholder="Nome, subcategoria, cor ou tamanho">
             </label>
           </div>
 

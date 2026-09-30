@@ -200,7 +200,9 @@ const elementos = {
   confirmarMovimentacaoBtn: $('#confirmar-movimentacao-btn'),
   conferenciaInicio: $('#conferencia-inicio'),
   conferenciaAtiva: $('#conferencia-ativa'),
-  iniciarConferenciaBtn: $('#iniciar-conferencia-btn'),
+  conferenciaCategorias: $('#conferencia-categorias'),
+  conferenciaCategoriasVazio: $('#conferencia-categorias-vazio'),
+  conferenciaCategoriaTitulo: $('#conferencia-categoria-titulo'),
   conferenciaProgressoTexto: $('#conferencia-progresso-texto'),
   conferenciaProgressoBarra: $('#conferencia-progresso-barra'),
   conferenciaBusca: $('#conferencia-busca'),
@@ -331,7 +333,7 @@ function configurarEventos() {
     });
   });
 
-  elementos.iniciarConferenciaBtn.addEventListener('click', aoIniciarConferencia);
+  elementos.conferenciaCategorias.addEventListener('click', aoClicarCategoriaConferencia);
   elementos.conferenciaAnteriorBtn.addEventListener('click', () => navegarConferencia(-1));
   elementos.conferenciaProximoBtn.addEventListener('click', salvarEAvancarConferencia);
   elementos.conferenciaBusca.addEventListener('input', aoBuscarNaConferencia);
@@ -1578,11 +1580,23 @@ async function carregarConferencia() {
   }
 }
 
-async function aoIniciarConferencia() {
+function aoClicarCategoriaConferencia(evento) {
+  const botao = evento.target.closest('[data-conference-category]');
+  if (!botao) return;
+  aoIniciarConferencia(botao.dataset.conferenceCategory);
+}
+
+async function aoIniciarConferencia(categoria) {
   try {
-    mostrarCarregamento(true, 'Preparando a conferência...');
-    const resultado = await iniciarConferencia();
-    estado.conferencia.dados = { id: resultado.id, status: 'em_andamento' };
+    mostrarCarregamento(true, `Preparando ${categoria}...`);
+    const resultado = await iniciarConferencia(categoria);
+    estado.conferencia.busca = '';
+    elementos.conferenciaBusca.value = '';
+    estado.conferencia.dados = {
+      id: resultado.id,
+      categoria: resultado.categoria ?? categoria,
+      status: 'em_andamento'
+    };
     estado.conferencia.itens = await listarItensConferencia(resultado.id);
     estado.conferencia.indice = 0;
     mostrarMensagem(resultado.resumida ? 'Conferência em andamento retomada.' : 'Conferência iniciada.', 'success');
@@ -1598,11 +1612,17 @@ function renderizarConferencia() {
   const ativa = Boolean(estado.conferencia.dados);
   elementos.conferenciaInicio.hidden = ativa;
   elementos.conferenciaAtiva.hidden = !ativa;
-  if (!ativa) return;
+  if (!ativa) {
+    renderizarCategoriasConferencia();
+    return;
+  }
 
   const total = estado.conferencia.itens.length;
   const conferidos = estado.conferencia.itens.filter((item) => item.quantidade_contada !== null).length;
   const percentual = total ? Math.round((conferidos / total) * 100) : 0;
+  elementos.conferenciaCategoriaTitulo.textContent = estado.conferencia.dados.categoria
+    ?? estado.conferencia.itens[0]?.produtos?.categoria
+    ?? 'Categoria';
   elementos.conferenciaProgressoTexto.textContent = `${conferidos} de ${total} produtos conferidos`;
   elementos.conferenciaProgressoBarra.style.width = `${percentual}%`;
 
@@ -1614,12 +1634,44 @@ function renderizarConferencia() {
   renderizarItemConferencia();
 }
 
+function renderizarCategoriasConferencia() {
+  const mapa = new Map();
+
+  estado.produtos
+    .filter((produto) => Number(produto.quantidade) > 0)
+    .forEach((produto) => {
+      const categoria = produto.categoria || 'SEM CATEGORIA';
+      const resumo = mapa.get(categoria) ?? { nome: categoria, pecas: 0, variacoes: 0 };
+      resumo.pecas += Number(produto.quantidade);
+      resumo.variacoes += 1;
+      mapa.set(categoria, resumo);
+    });
+
+  const categorias = [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  elementos.conferenciaCategoriasVazio.hidden = categorias.length > 0;
+  elementos.conferenciaCategorias.innerHTML = categorias.map((categoria) => `
+    <button class="category-card conference-category-card" type="button" data-conference-category="${escaparHtml(categoria.nome)}">
+      <span class="folder-label">Conferir categoria</span>
+      <strong>${escaparHtml(categoria.nome)}</strong>
+      <span>${categoria.pecas} ${categoria.pecas === 1 ? 'peça registrada' : 'peças registradas'}</span>
+      <small>${categoria.variacoes} ${categoria.variacoes === 1 ? 'produto para conferir' : 'produtos para conferir'}</small>
+    </button>
+  `).join('');
+}
+
 function itensVisiveisConferencia() {
   const termo = normalizarBusca(estado.conferencia.busca);
   if (!termo) return estado.conferencia.itens;
   return estado.conferencia.itens.filter((item) => {
     const produto = item.produtos ?? {};
-    return normalizarBusca([produto.nome, produto.cor, produto.tamanho, produto.categoria].join(' ')).includes(termo);
+    return normalizarBusca([
+      produto.nome,
+      produto.descricao,
+      produto.categoria,
+      produto.subcategoria,
+      produto.cor,
+      produto.tamanho
+    ].join(' ')).includes(termo);
   });
 }
 
@@ -1642,9 +1694,13 @@ function renderizarItemConferencia() {
   const produto = item.produtos ?? {};
   elementos.conferenciaItem.innerHTML = `
     <div class="conference-item-main">
-      <p class="eyebrow">Produto ${posicao + 1} de ${itens.length}</p>
+      <p class="eyebrow">${escaparHtml(produto.categoria ?? 'Sem categoria')} • Produto ${posicao + 1} de ${itens.length}</p>
       <h2>${escaparHtml(produto.nome ?? 'Produto indisponível')}</h2>
-      <p>${escaparHtml([produto.cor, produto.tamanho].filter(Boolean).join(' • '))}</p>
+      <div class="conference-item-details">
+        ${produto.subcategoria ? `<span class="tag">${escaparHtml(produto.subcategoria)}</span>` : ''}
+        ${produto.cor ? `<span class="tag">Cor: ${escaparHtml(produto.cor)}</span>` : ''}
+        ${produto.tamanho ? `<span class="tag">Tamanho: ${escaparHtml(produto.tamanho)}</span>` : ''}
+      </div>
       <p class="conference-system-qty">Quantidade no início da conferência: <strong>${item.quantidade_sistema}</strong></p>
     </div>
     <label class="conference-count-field" for="quantidade-contada-atual">Quantidade encontrada
@@ -1719,7 +1775,7 @@ function renderizarResumoConferencia() {
     const diferenca = Number(item.quantidade_contada) - sistemaAtual;
     return `
       <article class="difference-item">
-        <div><h3>${escaparHtml(item.produtos?.nome ?? '')}</h3><p>${escaparHtml([item.produtos?.cor, item.produtos?.tamanho].filter(Boolean).join(' • '))}</p><p>Sistema atual: ${sistemaAtual} • Encontrado: ${item.quantidade_contada}</p></div>
+        <div><h3>${escaparHtml(item.produtos?.nome ?? '')}</h3><p>${escaparHtml([item.produtos?.categoria, item.produtos?.subcategoria, item.produtos?.cor, item.produtos?.tamanho].filter(Boolean).join(' • '))}</p><p>Sistema atual: ${sistemaAtual} • Encontrado: ${item.quantidade_contada}</p></div>
         <span class="difference-value">${diferenca > 0 ? '+' : ''}${diferenca}</span>
       </article>
     `;
@@ -1734,6 +1790,7 @@ async function aoAplicarConferencia() {
     const resultado = await aplicarAjustesConferencia(estado.conferencia.dados.id);
     mostrarMensagem(`${resultado.ajustes} ajustes aplicados com sucesso.`, 'success');
     estado.conferencia = { dados: null, itens: [], indice: 0, busca: '' };
+    elementos.conferenciaBusca.value = '';
     await Promise.all([carregarProdutos(), carregarResumoMes(), carregarHistorico(true)]);
     renderizarConferencia();
   } catch (erro) {
@@ -1748,6 +1805,7 @@ async function aoCancelarConferencia() {
   try {
     await cancelarConferencia(estado.conferencia.dados.id);
     estado.conferencia = { dados: null, itens: [], indice: 0, busca: '' };
+    elementos.conferenciaBusca.value = '';
     renderizarConferencia();
     mostrarMensagem('Conferência cancelada. O estoque não foi alterado.', 'success');
   } catch (erro) {
@@ -1809,7 +1867,7 @@ function traduzirErro(erro) {
   if (mensagem.includes('Invalid login credentials')) return 'E-mail ou senha inválidos.';
   if (mensagem.includes('Failed to fetch')) return 'Não foi possível conectar ao Supabase. Verifique sua internet e a configuração do projeto.';
   if (mensagem.includes('Could not find the function') || mensagem.includes('schema cache') || mensagem.includes('conferencias')) {
-    return 'A atualização do banco ainda não foi aplicada. Execute o arquivo sql/2026-08-15-evolucao-estoque.sql no Supabase.';
+    return 'A atualização do banco ainda não foi aplicada. Execute as migrações SQL mais recentes no Supabase.';
   }
   if (mensagem.includes('Estoque insuficiente')) return mensagem.replace('Disponivel', 'Disponível');
   if (mensagem.includes('Usuario nao autenticado')) return 'Sua sessão expirou. Entre novamente.';
