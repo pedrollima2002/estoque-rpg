@@ -389,6 +389,12 @@ textarea[aria-invalid="true"] {
   justify-content: flex-end;
 }
 
+.conference-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .panel {
   padding: 18px;
   border: 1px solid var(--line);
@@ -1686,7 +1692,9 @@ textarea[aria-invalid="true"] {
   .section-heading,
   .folder-heading,
   .split-actions,
-  .form-actions {
+  .form-actions,
+  .conference-navigation,
+  .conference-step-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -1694,7 +1702,8 @@ textarea[aria-invalid="true"] {
   .form-actions .button,
   .split-actions > div,
   .split-actions > div .button,
-  .conference-navigation .button {
+  .conference-navigation .button,
+  .conference-step-actions {
     width: 100%;
   }
 
