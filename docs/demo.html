@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Demonstração | RPG Multimarcas</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .demo-banner { position: fixed; z-index: 999; right: 16px; bottom: 16px; background: #fff3cd; color: #594400; border: 1px solid #e7c966; border-radius: 999px; padding: 8px 16px; font-size: 12px; font-weight: 800; box-shadow: 0 8px 24px rgba(0,0,0,.12); white-space: nowrap; }
+    .demo-nav-link { text-decoration: none; }
+    .demo-screen[hidden] { display: none !important; }
+    .demo-caption { color: var(--muted-text, #64748b); margin-top: 4px; }
+    @media (max-width: 760px) { .demo-banner { top: auto; bottom: 76px; max-width: calc(100% - 24px); white-space: normal; text-align: center; } }
+  </style>
+</head>
+<body>
+  <div class="demo-banner">DEMONSTRAÇÃO ESTÁTICA · dados totalmente fictícios · nenhuma ação é salva</div>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><div><strong>RPG</strong><span>Multimarcas</span></div></div>
+      <nav class="side-nav" aria-label="Telas da demonstração">
+        <a class="nav-button demo-nav-link" data-link="dashboard" href="?tela=dashboard">Visão geral</a>
+        <a class="nav-button demo-nav-link" data-link="estoque" href="?tela=estoque">Estoque</a>
+        <a class="nav-button demo-nav-link" data-link="cadastro" href="?tela=cadastro">Novo produto</a>
+        <a class="nav-button demo-nav-link" data-link="conferencia" href="?tela=conferencia">Conferência</a>
+        <a class="nav-button demo-nav-link" data-link="historico" href="?tela=historico">Histórico</a>
+      </nav>
+      <div class="sidebar-session"><span class="user-email">usuario.demo@exemplo.invalid</span><span class="button ghost-button">Sair</span></div>
+    </aside>
+
+    <main class="workspace">
+      <header class="mobile-header"><div class="mobile-brand"><span>RPG Multimarcas</span><strong id="demo-page-title">Demonstração</strong></div><span class="button icon-text-button">Sair</span></header>
+
+      <section class="app-section demo-screen" data-screen="dashboard">
+        <div class="page-heading"><div><p class="eyebrow">Visão geral</p><h1>Estoque da loja</h1><p class="demo-caption">Indicadores fictícios para documentação do projeto.</p></div><span class="button primary-button">Novo produto</span></div>
+        <div class="dashboard-metrics" aria-label="Resumo demonstrativo">
+          <article class="summary-metric primary-metric"><span>Total de peças</span><strong>286</strong></article>
+          <article class="summary-metric"><span>Variações ativas</span><strong>47</strong></article>
+          <article class="summary-metric warning-metric"><span>Estoque baixo</span><strong>6</strong></article>
+          <article class="summary-metric danger-metric"><span>Produtos zerados</span><strong>2</strong></article>
+          <article class="summary-metric value-metric"><span>Valor do estoque</span><strong>R$ 31.842,50</strong></article>
+          <article class="summary-metric success-metric"><span>Entradas do mês</span><strong>+94</strong></article>
+          <article class="summary-metric danger-metric"><span>Saídas do mês</span><strong>-61</strong></article>
+        </div>
+        <div class="dashboard-columns">
+          <section class="panel attention-panel"><div class="section-heading"><div><p class="eyebrow">Prioridade</p><h2>Produtos que precisam de atenção</h2></div><span class="button ghost-button compact-button">Ver no estoque</span></div>
+            <div class="attention-list">
+              <article class="attention-item"><div><h3>Blusa Essencial</h3><p>AZUL-MARINHO · M</p><small>Sem estoque</small></div><span class="attention-count">0</span></article>
+              <article class="attention-item"><div><h3>Calça Alfaiataria</h3><p>PRETO · 40</p><small>Estoque baixo</small></div><span class="attention-count">2</span></article>
+              <article class="attention-item"><div><h3>Vestido Midi</h3><p>VERDE · G</p><small>Estoque baixo</small></div><span class="attention-count">3</span></article>
+            </div>
+          </section>
+          <section class="panel quick-panel"><p class="eyebrow">Operações</p><h2>Ações rápidas</h2><div class="quick-actions"><span class="button secondary-button">Cadastrar variações</span><span class="button ghost-button">Iniciar conferência</span><span class="button ghost-button">Consultar histórico</span></div></section>
+        </div>
+      </section>
+
+      <section class="app-section demo-screen" data-screen="estoque" hidden>
+        <div class="page-heading stock-heading"><div><p class="eyebrow">Produtos ativos</p><h1>Estoque</h1><p class="demo-caption">Produtos e quantidades fictícios.</p></div><div class="heading-actions"><div class="segmented-control"><span class="active">Individual</span><span>Por modelo</span></div><span class="button primary-button">Novo produto</span></div></div>
+        <div class="panel filter-panel"><div class="section-heading"><h2>Pesquisar no estoque inteiro</h2></div><div class="filters global-filters"><label class="wide-field">Produto<input type="search" placeholder="Nome, descrição, cor ou tamanho"></label><label>Categoria<select><option>Todas</option></select></label><label>Cor<select><option>Todas</option></select></label><label>Tamanho<select><option>Todos</option></select></label><label>Situação<select><option>Todos</option></select></label></div></div>
+        <div class="products-list">
+          <article class="product-card normal"><button class="quantity-button minus">−</button><div class="product-main"><div class="card-top"><div><h3>Camisa Linho</h3><p>Peça leve de manga longa</p><p class="price-line">Venda: <strong>R$ 129,90</strong></p></div></div><div class="tags"><span class="tag">CAMISAS</span><span class="tag">BRANCO</span><span class="tag">M</span></div><p class="stock-line"><strong>14</strong><span>unidades</span><span class="status-badge normal">Normal</span></p></div><button class="quantity-button plus">+</button></article>
+          <article class="product-card low"><button class="quantity-button minus">−</button><div class="product-main"><div class="card-top"><div><h3>Calça Alfaiataria</h3><p>Corte reto</p><p class="price-line">Venda: <strong>R$ 189,90</strong></p></div></div><div class="tags"><span class="tag">CALÇAS</span><span class="tag">PRETO</span><span class="tag">40</span></div><p class="stock-line"><strong>2</strong><span>unidades</span><span class="status-badge low">Estoque baixo</span></p></div><button class="quantity-button plus">+</button></article>
+          <article class="product-card empty"><button class="quantity-button minus">−</button><div class="product-main"><div class="card-top"><div><h3>Blusa Essencial</h3><p>Malha canelada</p><p class="price-line">Venda: <strong>R$ 79,90</strong></p></div></div><div class="tags"><span class="tag">BLUSAS</span><span class="tag">AZUL-MARINHO</span><span class="tag">M</span></div><p class="stock-line"><strong>0</strong><span>unidades</span><span class="status-badge empty">Sem estoque</span></p></div><button class="quantity-button plus">+</button></article>
+        </div>
+      </section>
+
+      <section class="app-section demo-screen" data-screen="cadastro" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Cadastro rápido</p><h1>Novo produto por variações</h1><p class="demo-caption">Exemplo sem envio ao banco.</p></div></div>
+        <section class="panel form-step"><div class="step-title"><span>1</span><h3>Dados do produto</h3></div><div class="form-grid base-product-grid"><label class="wide-field">Nome do produto<input value="Camisa Linho"></label><label>Categoria<input value="CAMISAS"></label><label>Subcategoria<input value="MANGA LONGA"></label><label class="wide-field">Descrição<input value="Peça leve de manga longa"></label><label>Valor de venda<input value="129,90"></label><label>Estoque mínimo<input value="3"></label></div></section>
+        <div class="variation-selectors"><section class="panel form-step"><div class="step-title"><span>2</span><h3>Cores</h3></div><div class="token-list"><span class="tag">BRANCO</span><span class="tag">AZUL</span><span class="tag">PRETO</span></div></section><section class="panel form-step"><div class="step-title"><span>3</span><h3>Tamanhos</h3></div><div class="token-list"><span class="tag">P</span><span class="tag">M</span><span class="tag">G</span></div></section></div>
+        <section class="panel form-step"><div class="step-title"><span>4</span><h3>Quantidades por variação</h3></div><div class="conference-result-metrics"><div><span>BRANCO · P</span><strong>4</strong></div><div><span>BRANCO · M</span><strong>6</strong></div><div><span>AZUL · M</span><strong>5</strong></div><div><span>PRETO · G</span><strong>3</strong></div></div><div class="form-actions"><span class="button ghost-button">Cancelar</span><span class="button primary-button">Cadastrar variações</span></div></section>
+      </section>
+
+      <section class="app-section demo-screen" data-screen="conferencia" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Contagem física</p><h1>Conferência de estoque</h1><p class="demo-caption">Fluxo ilustrativo com produtos fictícios.</p></div></div>
+        <div class="conference-layout"><div class="panel conference-toolbar"><div><span class="folder-label">Categoria em conferência</span><h2>CAMISAS</h2><span>7 de 12 produtos conferidos</span><div class="progress-track"><span style="width:58%"></span></div></div><label>Localizar produto<input type="search" placeholder="Nome, cor ou tamanho"></label></div>
+          <article class="panel conference-item"><div class="conference-item-main"><p class="eyebrow">CAMISAS · Produto 8 de 12</p><h2>Camisa Linho</h2><div class="conference-item-details"><span class="tag">MANGA LONGA</span><span class="tag">Cor: BRANCO</span><span class="tag">Tamanho: M</span></div><p class="conference-system-qty">Quantidade no início da conferência: <strong>14</strong></p></div><label class="conference-count-field">Quantidade encontrada<input type="number" value="13"></label></article>
+          <div class="conference-navigation"><span class="button danger-text-button">Cancelar e sair</span><div class="conference-step-actions"><span class="button ghost-button">Anterior</span><span class="button secondary-button">Salvar e próximo</span></div></div>
+        </div>
+      </section>
+
+      <section class="app-section demo-screen" data-screen="historico" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Auditoria</p><h1>Histórico</h1><p class="demo-caption">Movimentações e responsáveis fictícios.</p></div><span class="button ghost-button">Atualizar</span></div>
+        <div class="panel filter-panel"><div class="period-shortcuts"><span class="button chip-button">Hoje</span><span class="button chip-button">Esta semana</span><span class="button chip-button">Este mês</span><span class="button chip-button">Todo o período</span></div></div>
+        <div class="history-list">
+          <article class="history-item"><div class="history-delta negative">-2</div><div class="history-main"><span class="history-type">Venda</span><h3>Camisa Linho</h3><p>BRANCO · M</p><p>Estoque: <strong>16 → 14</strong></p><small>Responsável: Usuário demonstração</small></div><time class="history-date">08/10/2026 · 10:42</time></article>
+          <article class="history-item"><div class="history-delta positive">+5</div><div class="history-main"><span class="history-type">Entrada</span><h3>Vestido Midi</h3><p>VERDE · G</p><p>Estoque: <strong>3 → 8</strong></p><small>Responsável: Usuário demonstração</small></div><time class="history-date">08/10/2026 · 09:18</time></article>
+          <article class="history-item"><div class="history-delta neutral">0</div><div class="history-main"><span class="history-type">Edição</span><h3>Calça Alfaiataria</h3><p>PRETO · 40</p><p>Estoque: <strong>2 → 2</strong></p><small>Responsável: Usuário demonstração</small></div><time class="history-date">07/10/2026 · 17:05</time></article>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Navegação mobile"><a class="bottom-nav-button demo-nav-link" href="?tela=dashboard">Início</a><a class="bottom-nav-button demo-nav-link" href="?tela=estoque">Estoque</a><a class="bottom-add-button demo-nav-link" href="?tela=cadastro" aria-label="Novo produto">+</a><a class="bottom-nav-button demo-nav-link" href="?tela=historico">Histórico</a><a class="bottom-nav-button demo-nav-link" href="?tela=conferencia">Conferir</a></nav>
+  </div>
+  <script>
+    const validas = ['dashboard', 'estoque', 'cadastro', 'conferencia', 'historico'];
+    const solicitada = new URLSearchParams(location.search).get('tela');
+    const tela = validas.includes(solicitada) ? solicitada : 'dashboard';
+    document.querySelectorAll('[data-screen]').forEach((item) => { item.hidden = item.dataset.screen !== tela; });
+    document.querySelectorAll(`[data-link="${tela}"]`).forEach((item) => item.classList.add('active'));
+    document.getElementById('demo-page-title').textContent = { dashboard: 'Visão geral', estoque: 'Estoque', cadastro: 'Novo produto', conferencia: 'Conferência', historico: 'Histórico' }[tela];
+  </script>
+</body>
+</html>

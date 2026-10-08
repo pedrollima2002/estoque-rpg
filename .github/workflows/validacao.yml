@@ -1,0 +1,30 @@
+name: validação
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  projeto:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validar arquivos e referências
+        run: node scripts/validar-projeto.mjs
+
+      - name: Verificar sintaxe JavaScript
+        shell: bash
+        run: |
+          for arquivo in js/*.js; do
+            node --check "$arquivo"
+          done

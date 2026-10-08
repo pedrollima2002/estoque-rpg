@@ -1,6 +1,81 @@
-# RPG Multimarcas - Controle de Estoque
+# RPG Multimarcas — controle de estoque
 
-Sistema web de estoque compartilhado da RPG Multimarcas. A aplicação foi desenhada para a rotina de uma loja de roupas: cadastro rápido de cores e tamanhos, movimentação segura, histórico auditável, conferência física e uso confortável no celular ou computador.
+[![Validação](https://github.com/pedrollima2002/estoque-rpg/actions/workflows/validacao.yml/badge.svg)](https://github.com/pedrollima2002/estoque-rpg/actions/workflows/validacao.yml)
+
+[Aplicação publicada](https://pedrollima2002.github.io/estoque-rpg/) · [Demonstração estática com dados fictícios](https://pedrollima2002.github.io/estoque-rpg/docs/demo.html) · [Testes realizados](docs/TESTES.md)
+
+Sistema web compartilhado para controlar o estoque de uma loja de roupas. O projeto resolve um problema operacional concreto: registrar variações de cor e tamanho, impedir saídas inválidas, preservar o histórico e realizar conferências físicas sem perder rastreabilidade.
+
+> A aplicação publicada exige login porque trabalha com dados privados da loja. Não há credenciais públicas. A demonstração estática permite avaliar a interface com dados totalmente fictícios e não grava nenhuma informação.
+
+![Fluxo demonstrativo do sistema](docs/demo-fluxo.gif)
+
+## Estudo de caso em 60 segundos
+
+### Problema
+
+Planilhas e alterações manuais de quantidade não protegem contra estoque negativo, edições concorrentes ou perda do histórico. Produtos de moda ainda acrescentam uma dificuldade: o mesmo modelo possui várias combinações de cor e tamanho.
+
+### Solução
+
+- cadastro em matriz, gerando somente as variações que possuem quantidade;
+- movimentação transacional no PostgreSQL, em vez de cálculo inseguro apenas no navegador;
+- histórico auditável com quantidade anterior, nova quantidade, diferença, motivo e usuário;
+- arquivamento sem destruição do histórico;
+- conferência física por categoria, com progresso salvo e aplicação das divergências somente após confirmação;
+- interface responsiva para uso no balcão pelo celular e no computador.
+
+### Minha contribuição
+
+Desenvolvi a interface responsiva em HTML, CSS e JavaScript, modelei as evoluções do banco, implementei as funções RPC e políticas de acesso no Supabase, organizei os fluxos de produtos, movimentações, histórico e conferência e publiquei o frontend no GitHub Pages.
+
+### Resultado técnico
+
+O sistema reúne cadastro, consulta, movimentação, auditoria e conferência em um único fluxo autenticado. As operações críticas de quantidade ficam no banco e são registradas no histórico. Não atribuo aumento de vendas ou economia financeira ao projeto porque esses resultados não foram medidos.
+
+## Evidências visuais
+
+Todas as telas abaixo usam dados fictícios e estão identificadas como demonstração.
+
+| Visão geral | Estoque |
+|---|---|
+| ![Dashboard com indicadores fictícios](docs/screenshots/01-dashboard.png) | ![Lista de produtos fictícios](docs/screenshots/02-estoque.png) |
+
+| Cadastro por variações | Conferência física |
+|---|---|
+| ![Cadastro demonstrativo por cores e tamanhos](docs/screenshots/03-cadastro.png) | ![Conferência demonstrativa por categoria](docs/screenshots/04-conferencia.png) |
+
+| Histórico auditável | Layout mobile |
+|---|---|
+| ![Histórico com movimentações fictícias](docs/screenshots/05-historico.png) | ![Dashboard demonstrativo em tela móvel](docs/screenshots/06-mobile-dashboard.png) |
+
+## Decisões técnicas importantes
+
+| Decisão | Motivo |
+|---|---|
+| JavaScript nativo | Manter carregamento simples e reduzir dependências para uma aplicação pequena. |
+| Supabase Auth + RLS | Restringir dados e operações a usuários autenticados. |
+| RPC transacional | Evitar que dois usuários calculem quantidades concorrentes apenas no navegador. |
+| Arquivamento lógico | Preservar histórico e permitir restauração. |
+| Fotografia da conferência | Comparar a contagem física com a quantidade existente no momento de início. |
+| GitHub Pages | Hospedagem adequada ao frontend estático; o banco permanece no Supabase. |
+
+## Fluxo da arquitetura
+
+```text
+Usuário autenticado
+        |
+        v
+HTML/CSS/JavaScript no GitHub Pages
+        |
+        +--> leituras protegidas por RLS
+        |
+        +--> funções RPC transacionais
+                    |
+                    +--> produtos
+                    +--> movimentações auditáveis
+                    +--> conferências e itens contados
+```
 
 ## Tecnologias
 
